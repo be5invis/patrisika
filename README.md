@@ -3,7 +3,19 @@ Patrisika
 
 An AST library with free combination.
 
+Current Passes
+-----------------------------------
+###Variable Scoping
+###Semantic Expansion
+###Optimization
+###Regularization
+- **simplify-object-literal** : Regularize complex object literal ([.obj]) nodes into JavaScript-style nodes, which means that there is no 'get' or 'set' kind property pair.
+- **regular-nest** : Convert freely-combined nodes into statement-expression hierarchy
+- **resolve-t-scoping** : "Declare" all T-variables used
+- **denest-seq** : Flatten nesting [.seq] nodes
 
+###Transformation
+- **codegen** : Converta Patrisika AST into Mozilla AST
 
 License
 -----------------------------------
