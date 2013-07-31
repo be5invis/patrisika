@@ -22,29 +22,29 @@ exports.nodeIsLiteral = function(node){
 }
 exports.STATEMENT_LEVEL = STATEMENT_LEVEL
 
-exports.recurse = function(node, f){
+exports.recurse = function(node, f, aux){
 	if(nodeIsOperation(node)) {
 		switch(node[0]){
 			case '.local' : return;
 			case '.obj' : {
 				for(var j = 1; j < node.length; j++){
-					node[j][1] = f(node[j][1])
+					node[j][1] = f(node[j][1], aux)
 				}
 				return;
 			}
 			case '.fn' : {
-				node[2] = f(node[2]);
+				node[2] = f(node[2], aux);
 				return;
 			}
 			default : {
 				for(var j = 1; j < node.length; j++){
-					node[j] = f(node[j])
+					node[j] = f(node[j], aux)
 				}
 			}
 		}
 	} else if(node instanceof Array) {
 		for(var j = 0; j < node.length; j++){
-			node[j] = f(node[j])
+			node[j] = f(node[j], aux)
 		}
 	}
 }
