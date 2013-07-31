@@ -1,16 +1,16 @@
 Patrisika
 ===================================
 
-An AST library.
+An AST library with free combination.
 
 
 
 License
 -----------------------------------
 ###Patrisika
-SourceNodeMocks has a limited interface of mozilla/source-map SourceNode implementations.
+Patrisika is a library about orthogonal AST for JavaScript
 
-Copyright (c) 2009-2011, Mozilla Foundation and contributors
+Copyright (c) 2013, Belleve Invis and contributors
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
