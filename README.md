@@ -6,10 +6,16 @@ An AST library with free combination.
 Current Passes
 -----------------------------------
 ###Variable Scoping
+
 ###Semantic Expansion
+- **expand-object-literal** : Expand complex object literal ([.obj]) nodes into JavaScript-style nodes, which means that there is no 'get' or 'set' kind property pair.
+- **expand-fn-literal** : Expand irregular and optional parameters of function literals
+- **expand-assignments** : Expand irregular assignments
+
 ###Optimization
+
 ###Regularization
-- **simplify-object-literal** : Regularize complex object literal ([.obj]) nodes into JavaScript-style nodes, which means that there is no 'get' or 'set' kind property pair.
+
 - **regular-nest** : Convert freely-combined nodes into statement-expression hierarchy
 - **resolve-t-scoping** : "Declare" all T-variables used
 - **denest-seq** : Flatten nesting [.seq] nodes

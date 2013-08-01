@@ -1,16 +1,16 @@
-/// Pass Simplify Object Literals
-/// abbr. sol
+/// Pass Expand Object Literals
+/// abbr. xol
 /// In this pass, object literals are simplified into init-pair only.
 
 var Hash = require('../common/hash').Hash;
-var mt = require('../common/tempname').TMaker('sol');
+var mt = require('../common/tempname').TMaker('xol');
 var nodeIsOperation = require('../common/node-types.js').nodeIsOperation;
 var recurse = require('../common/node-types.js').recurse;
 
 exports.Pass = function(){
-	var sol = function(node){
+	var xol = function(node){
 		if(!(node instanceof Array)) return node;
-		recurse(node, sol);
+		recurse(node, xol);
 		if(node[0] === '.obj') {
 			var foundAccessorProperty = false;
 			var foundIrregularAccessorBind = false;
@@ -75,5 +75,5 @@ exports.Pass = function(){
 			return node;
 		}
 	}
-	return sol;
+	return xol;
 }

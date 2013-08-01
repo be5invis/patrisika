@@ -1,18 +1,18 @@
-/// Pass Simplify Function Literals
-/// abbr. sfl
+/// Pass Expand Function Literals
+/// abbr. xfl
 /// In this pass, parameters of Function literals are simplified into
 /// [.list (id | [.t id])*]
 
 var Hash = require('../common/hash').Hash;
-var mt = require('../common/tempname').TMaker('sfl');
+var mt = require('../common/tempname').TMaker('xfl');
 var nodeIsOperation = require('../common/node-types.js').nodeIsOperation;
 var recurse = require('../common/node-types.js').recurse;
 var formAssignment = require('../common/patterns.js').formAssignment;
 
 exports.Pass = function(){
-	var sfl = function(node){
+	var xfl = function(node){
 		if(!(node instanceof Array)) return node;
-		recurse(node, sfl);
+		recurse(node, xfl);
 		if(node[0] === '.fn') {
 			var parameters = node[1];
 			var body = node[2];
@@ -69,5 +69,5 @@ exports.Pass = function(){
 			return node;
 		}
 	}
-	return sfl;
+	return xfl;
 }

@@ -1,5 +1,5 @@
-/// Pass Simplify Assignments
-/// abbr. sa
+/// Pass Expand Assignments
+/// abbr. xa
 /// In this pass, assignments will be simplified into 3 forms below
 /// [= id val]
 /// [= [.t id] val]
@@ -11,9 +11,9 @@ var nodeIsOperation = require('../common/node-types').nodeIsOperation;
 var formAssignment = require('../common/patterns.js').formAssignment;
 
 exports.Pass = function(config) {
-	var sa = function(node){
+	var xa = function(node){
 		if(!(node instanceof Array)) return node;
-		recurse(node, sa);
+		recurse(node, xa);
 		if(node[0] === '=') {
 			return formAssignment(node[1], node[2])
 		} else {
@@ -21,5 +21,5 @@ exports.Pass = function(config) {
 		}
 	}
 
-	return sa;
+	return xa;
 }
