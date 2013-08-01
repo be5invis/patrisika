@@ -4,7 +4,6 @@
 
 var Hash = require('../common/hash').Hash;
 var mt = require('../common/tempname').TMaker('sol');
-var mt = require('../common/tempname').TMaker('sol');
 var nodeIsOperation = require('../common/node-types.js').nodeIsOperation;
 var recurse = require('../common/node-types.js').recurse;
 

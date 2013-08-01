@@ -47,6 +47,25 @@ exports.Pass = function(config) {
 	nodeTranformFunctions['.unit'] = function(name){
 		return {type: 'UnaryExpression', operator:'void', prefix: true, argument: {type: 'Literal', value: 0}}
 	}
+	nodeTranformFunctions['.args'] = function(name){
+		return {type: 'CallExpression', 
+			callee: {
+				type: 'MemberExpression',
+				object: {
+					type: 'MemberExpression',
+					object: {
+						type: 'ArrayExpression',
+						elements: []
+					},
+					property: {type: 'Identifier', name: 'slice'},
+					computed: false
+				},
+				property: {type: 'Identifier', name: 'call'},
+				computed: false
+			},
+			arguments: [{type: 'Identifier', name: 'arguments'}]
+		}
+	}
 	var group = function(s){return '(' + s + ')'}
 	var binopoid = function(spiderMonkeyNodeType){
 		return function(operator, jsOperator){
@@ -100,6 +119,12 @@ exports.Pass = function(config) {
 			})
 		}
 	}
+	nodeTranformFunctions['.list'] = function(){
+		return {
+			type: 'ArrayExpression',
+			elements: ArgsToArray(arguments).map(transform)
+		}
+	}
 	nodeTranformFunctions['.seq'] = function(){
 		return {
 			type: 'BlockStatement',
@@ -137,7 +162,7 @@ exports.Pass = function(config) {
 	nodeTranformFunctions['.fn'] = function(parameters, body) {
 		return {
 			type: 'FunctionExpression',
-			params: parameters.map(transform),
+			params: parameters.slice(1).map(transform),
 			body: {
 				type: 'BlockStatement',
 				body: [aStatement(body)]
