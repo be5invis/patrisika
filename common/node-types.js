@@ -11,12 +11,15 @@ STATEMENT_LEVEL.put('.while', true)
 STATEMENT_LEVEL.put('.return', true)
 STATEMENT_LEVEL.put('.try', true)
 STATEMENT_LEVEL.put('.local', true)
+STATEMENT_LEVEL.put('.break', true)
 
 exports.nodeIsOperation = nodeIsOperation
 exports.nodeIsStatemental = function(node){
 	return nodeIsOperation(node) && STATEMENT_LEVEL.get(node[0])
 }
-
+exports.nodeIsVariable = function(node){
+	return node && (typeof node === 'string')
+}
 exports.nodeIsLiteral = function(node){
 	return nodeIsOperation(node) && (node[0] === '.lit' || node[0] === '.fn')
 }
@@ -26,6 +29,7 @@ exports.recurse = function(node, f, aux){
 	if(nodeIsOperation(node)) {
 		switch(node[0]){
 			case '.local' : return;
+			case '.break' : return;
 			case '.obj' : {
 				for(var j = 1; j < node.length; j++){
 					node[j][1] = f(node[j][1], aux)

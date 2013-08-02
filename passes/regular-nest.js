@@ -6,20 +6,25 @@
 
 var Hash = require('../common/hash').Hash
 var mt = require('../common/tempname').TMaker('rn')
+var nodeIsStatemental = require('../common/node-types').nodeIsStatemental
+var nodeIsLiteral = require('../common/node-types').nodeIsLiteral
+var nodeIsOperation = require('../common/node-types').nodeIsOperation
+var cloneNode = require('../common/clone-node').cloneNode
+
 var TYPE = 0
-var nodeIsStatemental = require('../common/node-types').nodeIsStatemental;
-var nodeIsLiteral = require('../common/node-types').nodeIsLiteral;
-var nodeIsOperation = require('../common/node-types').nodeIsOperation;
 
 exports.Pass = function(config){
 	var bv = function(t, X) {
+		// Function bv: Bind T-variable t to the "value" of node X
 		if(!nodeIsOperation(X)) return ['=', t, X];
 		switch(X[TYPE]) {
 			case '.seq' : {
+				X = X.slice(0);
 				X[X.length - 1] = bv(t, X[X.length - 1])
 				return X
 			}
 			case '.if' : {
+				X = X.slice(0);
 				X[2] = bv(t, X[2])
 				if(X[3]) X[3] = bv(t, X[3])
 				return X
@@ -124,7 +129,7 @@ exports.Pass = function(config){
 					var t = mt();
 					var binding = bv(t, node[1])
 					node[1] = t;
-					node[2] = ['.seq', node[2], binding];
+					node[2] = ['.seq', node[2], cloneNode(binding)];
 					return ['.seq', ['.declt', t], binding, node];
 				} else {
 					return node;
