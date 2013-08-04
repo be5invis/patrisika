@@ -5,23 +5,30 @@ An AST library with free combination.
 
 Current Passes
 -----------------------------------
-###Variable Scoping
 
-###Semantic Expansion
-- **expand-object-literal** : Expand complex object literal ([.obj]) nodes into JavaScript-style nodes, which means that there is no 'get' or 'set' kind property pair.
+###Early Semantic Expansion
 - **expand-fn-literal** : Expand irregular and optional parameters of function literals
 - **expand-assignments** : Expand irregular assignments
 
+###Variable Scoping
+- **resolve-variable-scoping** : Create `[.local]` nodes to handle variable declarations, constant declarations, and variable renaming.
+- **convert-eqc** : Convert all `[=c]` nodes into `[=]` nodes. `[=c]` nondes have the same semantics as `[=]`s but are used for constant declarations only.
+
+###Later Semantic Expansion
+- **expand-object-literal** : Expand complex object literal (`[.obj]`) nodes into JavaScript-style nodes, which means that there is no 'get' or 'set' kind property pair.
+- **cps** : **[TODO]** Convert sequences into nested callbacks.
+
 ###Optimization
+- **expand-iife** : **[TODO]** Expand immediately-invoked function expressions into straight statements.
 
 ###Regularization
 
 - **regular-nest** : Convert freely-combined nodes into statement-expression hierarchy
 - **resolve-t-scoping** : "Declare" all T-variables used
-- **denest-seq** : Flatten nesting [.seq] nodes
+- **denest-seq** : Flatten nesting `[.seq]` nodes
 
 ###Transformation
-- **codegen** : Converta Patrisika AST into Mozilla AST
+- **codegen** : Convert Patrisika AST into Mozilla AST
 
 License
 -----------------------------------
