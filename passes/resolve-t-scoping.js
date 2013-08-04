@@ -1,11 +1,12 @@
 /// Pass Resolve T Scoping
 /// In Ptrisika, we often introduce T-variables to store intermediate values. 
 /// In this pass, all T-variables are "declared", and forms an [.local] node
-/// for every scopes containing T-variables.  [.declt] nodes are removed in 
+/// for every scopes containing T-variables.  [.declare [.t id]] nodes are removed in 
 /// this pass. After this pass, there should be no more T-variables introduced.
 
-var recurse = require('../common/node-types.js').recurse;
+var recurse = require('../common/node-types.js').recurse
 var Hash = require('../common/hash').Hash
+var nodeIsOperation = require('../common/node-types').nodeIsOperation
 
 exports.Pass = function(config) {
 
@@ -20,7 +21,7 @@ exports.Pass = function(config) {
 				node[2] = ['.seq', ['.local'].concat(localTs), node[2]];
 			}
 			return node;
-		} else if(node[0] === '.declt'){
+		} else if(node[0] === '.declare' && nodeIsOperation(node[1]) && node[1][0] === '.t'){
 			env.put(node[1][1], true);
 			return ['.unit'];
 		} else {

@@ -47,6 +47,12 @@ exports.Pass = function(config) {
 	nodeTranformFunctions['.unit'] = function(name){
 		return {type: 'UnaryExpression', operator:'void', prefix: true, argument: {type: 'Literal', value: 0}}
 	}
+	nodeTranformFunctions['.declare'] = function(name){
+		return transform(['.unit'])
+	}
+	nodeTranformFunctions['.declare-const'] = function(name){
+		return transform(['.unit'])
+	}
 	nodeTranformFunctions['.args'] = function(name){
 		return {type: 'CallExpression', 
 			callee: {

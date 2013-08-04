@@ -43,14 +43,14 @@ exports.Pass = function(config){
 	}
 	var bvPush = function(node, sequence) {
 		var t = mt();
-		sequence.push(['.seq', ['.declt', t], bv(t, node)])
+		sequence.push(['.seq', ['.declare', t], bv(t, node)])
 		return t;
 	}
 	var bvMemberPush = function(node, sequence) {
 		var t1 = mt();
-		sequence.push(['.seq', ['.declt', t1], bv(t1, node[1])])
+		sequence.push(['.seq', ['.declare', t1], bv(t1, node[1])])
 		var t2 = mt();
-		sequence.push(['.seq', ['.declt', t2], bv(t2, node[2])])
+		sequence.push(['.seq', ['.declare', t2], bv(t2, node[2])])
 		return ['.', t1, t2];
 	}
 	var CHECK_FIRST_SUBITEM_IS_MEMBERING = true;
@@ -113,7 +113,7 @@ exports.Pass = function(config){
 					var t = mt();
 					var binding = bv(t, node[1])
 					node[1] = t;
-					return ['.seq', ['.declt', t], binding, node]
+					return ['.seq', ['.declare', t], binding, node]
 				} else {
 					return node;
 				}
@@ -130,7 +130,7 @@ exports.Pass = function(config){
 					var binding = bv(t, node[1])
 					node[1] = t;
 					node[2] = ['.seq', node[2], cloneNode(binding)];
-					return ['.seq', ['.declt', t], binding, node];
+					return ['.seq', ['.declare', t], binding, node];
 				} else {
 					return node;
 				}

@@ -30,6 +30,11 @@ exports.recurse = function(node, f, aux){
 		switch(node[0]){
 			case '.local' : return;
 			case '.break' : return;
+			case '.lit' : return;
+			case '.declare' : return;
+			case '.label' : {
+				node[2] = f(node[2], aux)
+			};
 			case '.obj' : {
 				for(var j = 1; j < node.length; j++){
 					node[j][1] = f(node[j][1], aux)

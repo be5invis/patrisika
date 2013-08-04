@@ -37,13 +37,13 @@ exports.Pass = APassFor('.obj', function(node){
 		// Create a T-variable, representing the object being created.
 		var t = mt();
 		var nPropertiesBeforeAccessor = node.slice(0, jFirstAccessor);
-		var s = ['.seq', ['.declt', t], ['=', t, nPropertiesBeforeAccessor]];
+		var s = ['.seq', ['.declare', t], ['=', t, nPropertiesBeforeAccessor]];
 		for(var j = jFirstAccessor; j < node.length; j++){
 			if(node[j][2] === 'get' || node[j][2] === 'set'){
 				var pair = hAccessorProperties.get(node[j][0])
 				if(!pair) pair = {get: ['.lit', null], set: ['.lit', null]}
 				var tProp = mt();
-				s.push(['.seq', ['.declt', tProp], ['=', 
+				s.push(['.seq', ['.declare', tProp], ['=', 
 					tProp,
 					node[j][1]
 				]])

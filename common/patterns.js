@@ -6,14 +6,17 @@ var formAssignment = function(left, right, isDeclarative, isConstant){
 	if(typeof left === 'string') {
 		// Set an variable
 		var sAssignment = ['=', left, right]
-///		if(isDeclarative) {
-///			sAssignment = ['.seq', ['.declv', left], sAssignment]
-///			if(isConstant) sAssignment.push(['.const', left])
-///		}
+		if(isDeclarative) {
+			if(isConstant) {
+				return ['=c', left, right]
+			} else {
+				sAssignment = ['.seq', ['.declare', left], sAssignment]
+			}
+		}
 		return sAssignment
 	} else if(nodeIsOperation(left)) {
 		if(left[0] === '.t') {
-			if(isDeclarative) return ['.seq', ['.declt', left], ['=', left, right]]
+			if(isDeclarative) return ['.seq', ['.declare', left], ['=', left, right]]
 			else return ['=', left, right];
 		} else if(left[0] === '.') {
 			/// TODO: add constant property set support
