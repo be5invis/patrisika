@@ -15,11 +15,12 @@ Current Passes
 - **convert-eqc** : Convert all `[=c]` nodes into `[=]` nodes. `[=c]` nondes have the same semantics as `[=]`s but are used for constant declarations only.
 
 ###Later Semantic Expansion
+- **check-break** : Check and rename `[.label]` nodes and `[.break]` nodes.
 - **expand-object-literal** : Expand complex object literal (`[.obj]`) nodes into JavaScript-style nodes, which means that there is no 'get' or 'set' kind property pair.
 - **cps** : **[TODO]** Convert sequences into nested callbacks.
 
 ###Optimization
-- **expand-iife** : **[TODO]** Expand immediately-invoked function expressions into straight statements.
+- **expand-iife** : Expand immediately-invoked function expressions into straight statements.
 
 ###Regularization
 
