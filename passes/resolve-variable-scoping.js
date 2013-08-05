@@ -123,6 +123,8 @@ exports.Pass = function(config) {
 					node[1][j] = node[1][j].writeBack();
 				};
 				node.scope.locals = locals;
+				delete node.scope.uses;
+				delete node.scope.declarations;
 				return node;
 			} else {
 				recurse(node, writeBack)

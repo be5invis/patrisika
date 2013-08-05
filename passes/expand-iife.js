@@ -9,40 +9,56 @@ exports.Pass = function(config) {
 	var mt = require('../common/tempname').TMaker('xit');
 	var mta = require('../common/tempname').TMaker('xia');
 	var ml = require('../common/tempname').TMaker('xil');
-	var expandIIFE = function(node, aux, parent){
+
+	var transformIIFEBody = function(node, aux, parent) {
 		if(!node) return node;
 		if(nodeIsOperation(node)) {
 			if(node[0] === '.fn') {
-				recurse(node, expandIIFE, null);
 				return node;
-			} else if(node[0] === '.local' && aux) {
+			} else if(node[0] === '.local') {
 				// [.local alpha beta] -> [.seq [.local alpha beta] [= alpha [.unit]] [= beta [.unit]]]
 				return ['.seq', node].concat(node.slice(1).map(function(name){
-//					if(typeof name === 'string')
 						return ['=', name, ['.unit']]
-//					else 
-//						return ['.unit']
 				}))
-			} else if(node[0] === '.return' && aux) {
+			} else if(node[0] === '.return') {
 				return ['.seq', 
-					['=', aux.tid, expandIIFE(node[1], aux, node)],
+					['=', aux.tid, transformIIFEBody(node[1], aux, node)],
 					['.break', aux.lid]
 				]
-			} else if(node[0] === '.args' && aux) {
+			} else if(node[0] === '.args') {
 				return [['.', aux.aid, 'slice'], ['.lit', 0]]
-			} else if(node[0] === '.this' && aux) {
+			} else if(node[0] === '.this') {
 				return ['.lit', null]
 			} else {
-				recurse(node, expandIIFE, aux)
+				recurse(node, transformIIFEBody, aux)
 				return node;		
 			}
 		} else if(node instanceof Array) {
-			recurse(node, expandIIFE, aux);
+			recurse(node, transformIIFEBody, aux)
+			return node;
+		} else {
+			return node;
+		}
+	}
+
+	var expandIIFE = function(node){
+		if(!node) return node;
+		if(nodeIsOperation(node)) {
+			if(node[0] === '.fn') {
+				recurse(node, expandIIFE);
+				return node;
+			} else {
+				recurse(node, expandIIFE)
+				return node;		
+			}
+		} else if(node instanceof Array) {
+			recurse(node, expandIIFE);
 			if(nodeIsOperation(node[0]) && node[0][0] === '.fn' && nodeIsOperation(node[0][1]) && node[0][1][0] === '.list') {
 				var fn = node[0];
 				/// There are two situations which an IIFE could be expanded safely:
 				/// A. An IIFE which its callee does not have nested scopes.
 				/// B. An IIFE with NO parameters and NO local variables.
+
 				if((!fn.scope.children.length || (!fn.scope.locals.length && fn[1].length === 1 && node.length === 1))) {
 					///IIFE expansion
 					var t = mt();   // T for return value
@@ -56,7 +72,7 @@ exports.Pass = function(config) {
 							return ['=', name, ['.', ta, ['.lit', j]]]
 						})) : ['.unit']),
 						['.label', l, ['.seq', 
-							expandIIFE(fn[2], {tid: t, lid: l, aid: ta}, fn),
+							transformIIFEBody(fn[2], {tid: t, lid: l, aid: ta}, fn),
 							['=', t, ['.unit']]
 						]],
 						t // Return value of this IIFE
