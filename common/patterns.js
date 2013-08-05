@@ -34,14 +34,14 @@ var formAssignment = function(left, right, isDeclarative, isConstant){
 			var sAssignment = ['.seq', ['=', tObj, right]]			
 			for(var j = 1; j < left.length; j++){
 				if(left[j][2] === 'get' || left[j][2] === 'set') {
-					throw 'Invalid Object Pattern'
+					throw ['Invalid Object Pattern -- "get" or "set" directive.', left[j]]
 				}
 				sAssignment.push(formAssignment(left[j][1], ['.', tObj, ['.lit', left[j][0]]], isDeclarative, isConstant))
 			}
 			sAssignment.push(tObj)
 			return sAssignment
 		} else {
-			throw 'Invalid Pattern'
+			throw ['Invalid Pattern', left]
 		}
 	} else {
 		/// [= [f alpha beta] val] => [= [.list alpha beta] [[. f unapply] val]]

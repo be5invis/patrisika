@@ -30,7 +30,7 @@ exports.Pass = APassFor('.fn', function(node){
 					jFirstOptionalNode = j;
 				}
 			} else if (jFirstOptionalNode) {
-				throw 'This parameter must be optional'
+				throw ['This parameter must be optional.', parameters]
 			}
 		};
 		if(jFirstIrregularNode) {

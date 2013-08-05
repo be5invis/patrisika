@@ -33,27 +33,27 @@ exports.recurse = function(node, f, aux){
 			case '.lit' : return;
 			case '.declare' : return;
 			case '.label' : {
-				node[2] = f(node[2], aux)
+				node[2] = f(node[2], aux, node)
 			};
 			case '.obj' : {
 				for(var j = 1; j < node.length; j++){
-					node[j][1] = f(node[j][1], aux)
+					node[j][1] = f(node[j][1], aux, node)
 				}
 				return;
 			}
 			case '.fn' : {
-				node[2] = f(node[2], aux);
+				node[2] = f(node[2], aux, node);
 				return;
 			}
 			default : {
 				for(var j = 1; j < node.length; j++){
-					node[j] = f(node[j], aux)
+					node[j] = f(node[j], aux, node)
 				}
 			}
 		}
 	} else if(node instanceof Array) {
 		for(var j = 0; j < node.length; j++){
-			node[j] = f(node[j], aux)
+			node[j] = f(node[j], aux, node)
 		}
 	}
 }

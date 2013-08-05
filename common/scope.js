@@ -21,8 +21,8 @@ var Scope = function(parent){
 	this.children = []
 	this.uses = new Hash();
 }
-Scope.prototype.useVariable = function(name) {
-	this.uses.put(name, {link: null})
+Scope.prototype.useVariable = function(name, nodeAround) {
+	this.uses.put(name, {link: null, loc: nodeAround})
 	return new Symbol(this, name)
 }
 Scope.prototype.declare = function(name, isParameter, isConstant) {

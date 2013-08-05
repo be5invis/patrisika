@@ -20,7 +20,17 @@ var APassFor = function(type, handler){
 			if(!(node instanceof Array)) return node;
 			recurse(node, f, aux);
 			if(node[0] === type) {
-				return handler(node, aux)
+				try {
+					return handler(node, aux)
+				} catch(situation) {
+					if(situation instanceof Array){
+						throw config.createError(situation[0], situation[1] || node)
+					} else if(typeof situation === 'string') {
+						throw config.createError(situation, node)
+					} else {
+						throw situation
+					}
+				}
 			} else {
 				return node;
 			}

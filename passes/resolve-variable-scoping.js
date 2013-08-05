@@ -22,13 +22,13 @@ exports.Pass = function(config) {
 				return node;
 			} else if(node[0] === '.declare' && typeof node[1] === 'string') {
 				if(scope.declarations.has(node[1]) && scope.declarations.get(node[1]).isConstant) {
-					throw "Attempt to redefine constant " + node[1]
+					throw config.createError("Attempt to redefine constant " + node[1], node)
 				}
 				scope.declare(node[1], false, false)
 				return ['.unit']
 			} else if(node[0] === '=c' && typeof node[1] === 'string') {
 				if(scope.declarations.has(node[1])) {
-					throw "Attempt to redefine constant " + node[1]
+					throw config.createError("Attempt to redefine constant " + node[1], node)
 				} else {
 					scope.declare(node[1], false, true)
 				}
@@ -46,19 +46,19 @@ exports.Pass = function(config) {
 	}
 
 	/// Pass rvs-2: Check used variables
-	var checkUsages = function(node, scope){
+	var checkUsages = function(node, scope, parent){
 		if(!node) return node;
 		if(nodeIsOperation(node)) {
 			if(node[0] === '.fn') {
 				var subScope = node.scope;
 				for(var j = 1; j < node[1].length; j++) if(typeof node[1][j] === 'string') {
-					node[1][j] = subScope.useVariable(node[1][j])
+					node[1][j] = subScope.useVariable(node[1][j], node[1])
 				}
-				checkUsages(node[2], subScope);
+				checkUsages(node[2], subScope, node);
 				return node;
 			} else if(node[0] === '=' && typeof node[1] === 'string') {
 				if(scope.declarations.get(node[1]) && scope.declarations.get(node[1]).isConstant) {
-					throw "Attempt to assign to constant " + node[1]
+					throw config.createError("Attempt to assign to constant " + node[1], node)
 				}
 				recurse(node, checkUsages, scope)
 				return node
@@ -71,7 +71,7 @@ exports.Pass = function(config) {
 			return node;
 		} else if(typeof node === 'string') {
 			///  node is variable
-			return scope.useVariable(node);
+			return scope.useVariable(node, parent);
 		} else {
 			return node;
 		}
@@ -83,7 +83,7 @@ exports.Pass = function(config) {
 				/// Link the symbol
 				usage.link = scope.declarations.get(name)
 			} else if(config.explicit) {
-				throw "Undeclared vairable " + name
+				throw config.createError("Undeclared vairable " + name, usage.loc || null);
 			} else {
 				scope.declarations.put(name, new Declaration(name, false, false));
 				usage.link = scope.declarations.get(name)
