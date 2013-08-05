@@ -4,7 +4,7 @@
 /// generators, such as Escodegen or Uglify. The SpiderMonkey AST SUCKS. That's
 /// one of the the reasons I wrote Patrisika.
 
-var nodeTranformFunctions = {}
+var nodeTransformFunctions = {}
 var nodeIsStatemental = require('../common/node-types.js').nodeIsStatemental;
 var encodeCommonNames = require('../common/tempname').encodeCommonNames
 var encodeTNames = require('../common/tempname').encodeTNames
@@ -15,8 +15,8 @@ exports.Pass = function(config) {
 		if(typeof node === 'string') {
 			return {type: 'Identifier', name: encodeCommonNames(node)};
 		}
-		if((typeof node[0] === 'string') && (typeof nodeTranformFunctions[node[0]] === 'function')) {
-			return nodeTranformFunctions[node[0]].apply(null, node.slice(1));
+		if((typeof node[0] === 'string') && (typeof nodeTransformFunctions[node[0]] === 'function')) {
+			return nodeTransformFunctions[node[0]].apply(null, node.slice(1));
 		} else {
 			return {
 				type: 'CallExpression',
@@ -38,22 +38,22 @@ exports.Pass = function(config) {
 	}
 	var ArgsToArray = function(a){return [].slice.call(a, 0)}
 
-	nodeTranformFunctions['.lit'] = function(val){
+	nodeTransformFunctions['.lit'] = function(val){
 		return {type: 'Literal', value: val}
 	}
-	nodeTranformFunctions['.t'] = function(name){
+	nodeTransformFunctions['.t'] = function(name){
 		return {type: 'Identifier', name: encodeTNames(name)}
 	}
-	nodeTranformFunctions['.unit'] = function(name){
+	nodeTransformFunctions['.unit'] = function(name){
 		return {type: 'UnaryExpression', operator:'void', prefix: true, argument: {type: 'Literal', value: 0}}
 	}
-	nodeTranformFunctions['.declare'] = function(name){
+	nodeTransformFunctions['.declare'] = function(name){
 		return transform(['.unit'])
 	}
-	nodeTranformFunctions['.declare-const'] = function(name){
+	nodeTransformFunctions['.declare-const'] = function(name){
 		return transform(['.unit'])
 	}
-	nodeTranformFunctions['.args'] = function(name){
+	nodeTransformFunctions['.args'] = function(name){
 		return {type: 'CallExpression', 
 			callee: {
 				type: 'MemberExpression',
@@ -76,7 +76,7 @@ exports.Pass = function(config) {
 	var binopoid = function(spiderMonkeyNodeType){
 		return function(operator, jsOperator){
 			jsOperator = jsOperator || operator
-			nodeTranformFunctions[operator] = function(left, right){
+			nodeTransformFunctions[operator] = function(left, right){
 				return {
 					type: spiderMonkeyNodeType,
 					left: transform(left),
@@ -105,7 +105,7 @@ exports.Pass = function(config) {
 	logop('&&')
 	logop('||')
 	assop('=')
-	nodeTranformFunctions['.'] = function(left, right){
+	nodeTransformFunctions['.'] = function(left, right){
 		return {
 			type: 'MemberExpression',
 			object: transform(left),
@@ -113,7 +113,7 @@ exports.Pass = function(config) {
 			computed: true
 		}
 	}
-	nodeTranformFunctions['.obj'] = function(){
+	nodeTransformFunctions['.obj'] = function(){
 		return {
 			type: 'ObjectExpression',
 			properties: ArgsToArray(arguments).map(function(pair){
@@ -125,19 +125,19 @@ exports.Pass = function(config) {
 			})
 		}
 	}
-	nodeTranformFunctions['.list'] = function(){
+	nodeTransformFunctions['.list'] = function(){
 		return {
 			type: 'ArrayExpression',
 			elements: ArgsToArray(arguments).map(transform)
 		}
 	}
-	nodeTranformFunctions['.seq'] = function(){
+	nodeTransformFunctions['.seq'] = function(){
 		return {
 			type: 'BlockStatement',
 			body: ArgsToArray(arguments).map(aStatement)
 		}
 	}
-	nodeTranformFunctions['.local'] = function(){
+	nodeTransformFunctions['.local'] = function(){
 		return {
 			type: 'VariableDeclaration',
 			declarations: ArgsToArray(arguments).map(function(child){
@@ -150,7 +150,7 @@ exports.Pass = function(config) {
 			kind: 'var'
 		}
 	}
-	nodeTranformFunctions['.if'] = function(condition, thenPart, elsePart){
+	nodeTransformFunctions['.if'] = function(condition, thenPart, elsePart){
 		return {
 			type: 'IfStatement',
 			test: transform(condition),
@@ -158,32 +158,41 @@ exports.Pass = function(config) {
 			alternate: elsePart ? aStatement(elsePart) : null
 		}
 	}
-	nodeTranformFunctions['.while'] = function(condition, body){
+	nodeTransformFunctions['.while'] = function(condition, body){
 		return {
 			type: 'WhileStatement',
 			test: transform(condition),
 			body: aStatement(body)
 		}
 	}
-	nodeTranformFunctions['.fn'] = function(parameters, body) {
+	nodeTransformFunctions['.fn'] = function(parameters, body) {
 		return {
 			type: 'FunctionExpression',
 			params: parameters.slice(1).map(transform),
-			body: {
-				type: 'BlockStatement',
-				body: [aStatement(body)]
-			},
+			body: aStatement(body),
 			expression: false,
 			generator: false
 		}
 	}
-	nodeTranformFunctions['.return'] = function(expr) {
+	nodeTransformFunctions['.return'] = function(expr) {
 		return {
 			type: 'ReturnStatement',
 			argument: transform(expr)
 		}
 	}
-
+	nodeTransformFunctions['.label'] = function(label, expr) {
+		return {
+			type: 'LabeledStatement',
+			label: transform(label),
+			body: transform(expr)
+		}
+	}
+	nodeTransformFunctions['.break'] = function(label) {
+		return {
+			type: 'BreakStatement',
+			label: transform(label)
+		}
+	}
 
 	return transform
 }

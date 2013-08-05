@@ -15,6 +15,7 @@ var Scope = function(parent){
 	if(parent){
 		this.declarations = Object.create(parent.declarations)
 		parent.children.push(this);
+		this.parent = parent;
 	} else {
 		this.declarations = new Hash();
 	}

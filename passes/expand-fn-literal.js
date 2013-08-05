@@ -15,7 +15,7 @@ exports.Pass = APassFor('.fn', function(node){
 	if(!(parameters instanceof Array && parameters.length === 0) && (!nodeIsOperation(parameters) || parameters[0] !== '.list')) {
 		/// functions with parameter involving the whole arguments
 		body = ['.seq', formAssignment(parameters, ['.args'], true, true), body]
-		parameters = []
+		parameters = ['.list']
 		return ['.fn', parameters, body]
 	} else {
 		/// "regular" multiple-parameter function

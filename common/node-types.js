@@ -12,6 +12,7 @@ STATEMENT_LEVEL.put('.return', true)
 STATEMENT_LEVEL.put('.try', true)
 STATEMENT_LEVEL.put('.local', true)
 STATEMENT_LEVEL.put('.break', true)
+STATEMENT_LEVEL.put('.label', true)
 
 exports.nodeIsOperation = nodeIsOperation
 exports.nodeIsStatemental = function(node){
@@ -32,8 +33,10 @@ exports.recurse = function(node, f, aux){
 			case '.break' : return;
 			case '.lit' : return;
 			case '.declare' : return;
+			case '.t' : return;
 			case '.label' : {
 				node[2] = f(node[2], aux, node)
+				return;
 			};
 			case '.obj' : {
 				for(var j = 1; j < node.length; j++){
@@ -41,7 +44,8 @@ exports.recurse = function(node, f, aux){
 				}
 				return;
 			}
-			case '.fn' : {
+			case '.fn' :
+			case '.label' : {
 				node[2] = f(node[2], aux, node);
 				return;
 			}
@@ -49,6 +53,7 @@ exports.recurse = function(node, f, aux){
 				for(var j = 1; j < node.length; j++){
 					node[j] = f(node[j], aux, node)
 				}
+				return;
 			}
 		}
 	} else if(node instanceof Array) {

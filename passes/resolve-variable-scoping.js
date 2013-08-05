@@ -115,14 +115,14 @@ exports.Pass = function(config) {
 				subScope.declarations.forEach(function(name, declaration) {
 					if(!declaration.isParameter) locals.push(declaration.name)
 				});
-				writeBack(node[2])
+				writeBack(node[2]);
 				if(locals.length) {
 					node[2] = ['.seq', ['.local'].concat(locals), node[2]]
 				}
 				for(var j = 1; j < node[1].length; j++) if(node[1][j] instanceof Symbol) {
 					node[1][j] = node[1][j].writeBack();
-				}
-				delete node.scope;
+				};
+				node.scope.locals = locals;
 				return node;
 			} else {
 				recurse(node, writeBack)

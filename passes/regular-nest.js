@@ -5,7 +5,6 @@
 /// nested AST.
 
 var Hash = require('../common/hash').Hash
-var mt = require('../common/tempname').TMaker('rn')
 var nodeIsStatemental = require('../common/node-types').nodeIsStatemental
 var nodeIsLiteral = require('../common/node-types').nodeIsLiteral
 var nodeIsOperation = require('../common/node-types').nodeIsOperation
@@ -13,7 +12,8 @@ var cloneNode = require('../common/clone-node').cloneNode
 
 var TYPE = 0
 
-exports.Pass = function(config){
+exports.Pass = function(config) {
+	var mt = require('../common/tempname').TMaker('rn');
 	var bv = function(t, X) {
 		// Function bv: Bind T-variable t to the "value" of node X
 		if(!nodeIsOperation(X)) return ['=', t, X];
@@ -29,12 +29,17 @@ exports.Pass = function(config){
 				if(X[3]) X[3] = bv(t, X[3])
 				return X
 			}
-			case '.while' : {
+			case '.while' : 
+			case '.break' : {
 				return ['.seq', X, ['=', t, ['.unit']]]
 			}
 			case '.return' : {
 				// Binding value of an return statement is meaningless.
 				return X
+			}
+			case '.label' : {
+				X[2] = bv(t, X[2])
+				return X;
 			}
 			default : {
 				return ['=', t, X]
@@ -90,12 +95,17 @@ exports.Pass = function(config){
 		if(typeof node[0] !== 'string') return rnRegular(node, 0, CHECK_FIRST_SUBITEM_IS_MEMBERING);
 		switch(node[TYPE]) {
 			case '.lit' :
+			case '.break' :
 			case '.id' :
 			case '.t' : {
 				return node
 			}
 			case '.fn' : {
-				node[2] = rn(node[2])
+				node[2] = ['.seq', rn(node[2])]
+				return node
+			}
+			case '.label' : {
+				node[2] = ['.seq', rn(node[2])]
 				return node
 			}
 			case '.seq' : {
@@ -132,6 +142,7 @@ exports.Pass = function(config){
 					node[2] = ['.seq', node[2], cloneNode(binding)];
 					return ['.seq', ['.declare', t], binding, node];
 				} else {
+					node[2] = ['.seq', node[2]]
 					return node;
 				}
 			}
