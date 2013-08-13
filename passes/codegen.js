@@ -81,7 +81,7 @@ exports.Pass = function(config) {
 					type: spiderMonkeyNodeType,
 					left: transform(left),
 					right: transform(right),
-					operator: operator
+					operator: jsOperator
 				}
 			}	
 		}
@@ -99,7 +99,7 @@ exports.Pass = function(config) {
 	binop('<=')
 	binop('>=')
 	binop('==', '===')
-	binop('==', '!==')
+	binop('!=', '!==')
 	binop('=~', '==')
 	binop('!~', '!=')
 	logop('&&')
@@ -191,6 +191,17 @@ exports.Pass = function(config) {
 		return {
 			type: 'BreakStatement',
 			label: transform(label)
+		}
+	}
+	nodeTransformFunctions['.try'] = function(block, param, handler) {
+		return {
+			type: 'TryStatement',
+			block: transform(block),
+			handlers: [{
+				type: 'CatchClause',
+				param: transform(param),
+				body: transform(handler)
+			}]
 		}
 	}
 

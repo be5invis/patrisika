@@ -11,5 +11,5 @@ var nodeIsOperation = require('../common/node-types').nodeIsOperation
 var formAssignment = require('../common/patterns').formAssignment
 
 exports.Pass = APassFor('=', function(node){
-	return formAssignment(node[1], node[2])
+	return formAssignment(node[1], node[2], node[3], node[4])
 });

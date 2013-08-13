@@ -10,7 +10,11 @@ exports.Pass = function(config) {
 			if(node[0] === '.fn') {
 				checkBreak(node[2], new Hash());
 				return node
-			} else if(node[0] === '.label') {
+			} /*else if(node[0] === '.try') {
+				checkBreak(node[1], new Hash());
+				checkBreak(node[3], new Hash());
+				return node
+			} */else if(node[0] === '.label') {
 				var stack_ = Object.create(stack);
 				n++;
 				stack_.put(node[1], ('_LABEL_' + n));

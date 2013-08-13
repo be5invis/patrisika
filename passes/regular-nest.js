@@ -29,6 +29,11 @@ exports.Pass = function(config) {
 				if(X[3]) X[3] = bv(t, X[3])
 				return X
 			}
+			case '.try' : {
+				X = X.slice(0);
+				X[1] = bv(t, X[1])
+				return X
+			}
 			case '.while' : 
 			case '.break' : {
 				return ['.seq', X, ['=', t, ['.unit']]]
@@ -127,6 +132,14 @@ exports.Pass = function(config) {
 				} else {
 					return node;
 				}
+			}
+			case '.try' : {
+				// [operator, S, (e), S]
+				for(var j = 1; j < node.length; j++) {
+					node[j] = rn(node[j])
+				}
+				node[1] = ['.seq', node[1]];
+				return node
 			}
 			case '.while' : {
 				// [operator, EXPRESSIONAL CONDITION, STATEMENTAL BODY]

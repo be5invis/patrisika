@@ -44,16 +44,15 @@ exports.Pass = function(config) {
 	var expandIIFE = function(node){
 		if(!node) return node;
 		if(nodeIsOperation(node)) {
-			if(node[0] === '.fn') {
-				recurse(node, expandIIFE);
-				return node;
+			if(node[0] === '.doblock') {
+				return expandIIFE([node[1]])
 			} else {
 				recurse(node, expandIIFE)
 				return node;		
 			}
 		} else if(node instanceof Array) {
 			recurse(node, expandIIFE);
-			if(nodeIsOperation(node[0]) && node[0][0] === '.fn' && nodeIsOperation(node[0][1]) && node[0][1][0] === '.list') {
+			if(config.enableIIFEExpand && nodeIsOperation(node[0]) && node[0][0] === '.fn' && nodeIsOperation(node[0][1]) && node[0][1][0] === '.list') {
 				var fn = node[0];
 				/// There are two situations which an IIFE could be expanded safely:
 				/// A. An IIFE which its callee does not have nested scopes.
