@@ -25,7 +25,7 @@ exports.Pass = function(config) {
 				fn.needsCPS = true;
 			} else if(node[0] === '.doblock') {
 				recurse(node, generateFnCPSNeed, fn);
-				fn.needsCPS = node.needsCPS = node[1].needsCPS;
+				fn.needsCPS = fn.needsCPS || (node.needsCPS = node[1].needsCPS);
 			} else {
 				recurse(node, generateFnCPSNeed, fn);
 			}
@@ -84,23 +84,31 @@ exports.Pass = function(config) {
 			return false;
 		}
 	}
+	var Continuation = function(t, body) {
+		return ['.fn', ['.list', t], body]
+	}
+	var ContinuationResend = function(c) {
+		var t = mt();
+		return ['.fn', ['.list', t], ['.return', [c, t]]]
+	}
 	var generateCPSForFn = function(fn) {
 		var assignCont = function(node, continuation) {
 			return ['.seq', ['.declare', continuation[1][1]], ['=', continuation[1][1], node], continuation[2]]
+		//	return [continuation, node]
 		}
 		var cpsStandard = function(node, continuation, jStart, checkFirstIsMemberNode){
 			var c = assignCont(node, continuation);
 			for(var j = node.length - 1; j >= jStart; j--) {
 				if(j === jStart && checkFirstIsMemberNode && nodeIsOperation(node[j]) && node[j][0] === '.') {
 					var t = mt();
-					c = cps(node[j][2], ['.fn', ['.list', t], c])
+					c = cps(node[j][2], Continuation(t, c))
 					node[j][2] = t;
 					var t = mt();
-					c = cps(node[j][1], ['.fn', ['.list', t], c])
+					c = cps(node[j][1], Continuation(t, c))
 					node[j][1] = t;
 				} else {
 					var t = mt();
-					c = cps(node[j], ['.fn', ['.list', t], c])
+					c = cps(node[j], Continuation(t, c))
 					node[j] = t;
 				}
 			}
@@ -110,138 +118,150 @@ exports.Pass = function(config) {
 			var c = assignCont(node, continuation);
 			for(var j = node.length - 1; j >= 1; j--) {
 				var t = mt();
-				c = cps(node[j][1], ['.fn', ['.list', t], c])
+				c = cps(node[j][1], Continuation(t, c))
 				node[j][1] = t;
 			}
 			return c;
 		}
 		var cps = function(node, continuation) {
-			if(nodeIsOperation(node)) {
-				if(node.needsCPS) {
-					switch(node[0]) {
-						case '.lit' :
-						case '.t' :
-						case '.unit' : {
-							return assignCont(node, continuation)
-						}
-						case '=' : {
-							if(typeof node[1] === 'string') {
-								var t = mt();
-								return cps(node[2], ['.fn', ['.list', t], ['=', node[1], t]])
-							} else {
-								return cpsStandard(node, continuation, 1, true)
-							}
-						}
-						case '.wait' : {
+			if(nodeIsOperation(node) && node.needsCPS) {
+				switch(node[0]) {
+					case '.lit' :
+					case '.t' :
+					case '.unit' : {
+						return assignCont(node, continuation)
+					}
+					case '=' : {
+						if(typeof node[1] === 'string') {
 							var t = mt();
-							return cps(node[1], ['.fn', ['.list', t], [['.', tSchema, ['.lit', 'bind']], t, continuation]])
+							return cps(node[2], Continuation(t, ['=', node[1], t]))
+						} else {
+							return cpsStandard(node, continuation, 1, true)
 						}
-						case '.if' : {
-							var condition = node[1];
-							var thenPart = node[2];
-							var elsePart = node[3] || ['.unit'];
-							var fCont = mtf();
-							var fBranch = mtf();
-							var tCond = mt();
-							var tTP = mt();
-							var tEP = mt();
-							return ['.seq', 
-								['.declare', fCont],
-								['.declare', fBranch],
-								['=', fBranch, ['.fn', ['.list'], cps(condition, ['.fn', ['.list', tCond],
-									['.if', tCond, 
-										cps(thenPart, ['.fn', ['.list', tTP], ['.return', [fCont, tTP]]]),
-										cps(elsePart, ['.fn', ['.list', tEP], ['.return', [fCont, tEP]]])]
-								])]],
-								['=', fCont, continuation],
-								['.return', [fBranch]]
-							]
-						}
-						case '.try' : {
-							var normalPart = node[1];
-							var exceptionName = node[2];
-							var exceptionPart = node[3];
-							var fCont = mtf();
-							var fTry = mtf();
-							var fCatch = mtf();
-							var tTry = mt();
-							var tCatch = mt();
-							return ['.seq', 
-								['.declare', fTry],
-								['.declare', fCatch],
-								['=', fTry, ['.fn', ['.list', tSchema], cps(normalPart, ['.fn', ['.list', tTry],
-									['.return', [fCont, tTry]]
-								])]],
-								['=', fCatch, ['.fn', ['.list', tSchema, exceptionName], cps(exceptionPart, ['.fn', ['.list', tCatch],
-									['.return', [fCont, tCatch]]
-								])]],
-								['=', fCont, continuation],
-								['.return', [['.', tSchema, ['.lit', 'try']], fTry, fCatch]]
-							]
-						}
-						case '.while' : {
-							var condition = node[1];
-							var body = node[2];
-							var fCont = mtf();
-							var fLoop = mtf();
-							var tCond = mt();
-							var tB = mt();
-							return ['.seq', 
-								['.declare', fCont],
-								['.declare', fLoop],
-								['=', fLoop, ['.fn', ['.list'], 
-									cps(condition, ['.fn', ['.list', tCond],
-										['.if', tCond, 
-											cps(body, ['.fn', ['.list', tB], [fLoop]]),
-											['.return', [fCont]]]
-									])
-								]],
-								['=', fCont, continuation],
-								['.return', [fLoop]]
-							]
-						}
-						case '.label' : {
-							var label = node[1];
-							var body = node[2]
-							var tBody = mt();
-							var fStmt = mtf();
-							return ['.seq', 
-								['.declare', fStmt],
-								['.declare', ['.t', label]],
-								['=', fStmt, ['.fn', ['.list'], 
-									cps(body, ['.fn', ['.list', tBody], 
-										['.return', [['.t', label], tBody]]
-									])
-								]],
-								['=', ['.t', label], continuation],
-								['.return', [fStmt]]
-							]
-						}
-						case '.break' : {
-							return ['.return', [['.t', node[1]]]]
-						}
-						case '.doblock' : {
-							return [['.', tSchema, ['.lit', 'doblock']], cpstfm(node[1]), continuation]
-						}
-						case '.return' : {
-							var t = mt();
-							return cps(node[1], ['.fn', ['.list', t], 
-								['.return', [['.', tSchema, ['.lit', 'return']], t]]
+					}
+					case '.wait' : {
+						var t = mt();
+						return cps(node[1], Continuation(t, [['.', tSchema, ['.lit', 'bind']], t, continuation]))
+					}
+					case '.if' : {
+						var condition = node[1];
+						var thenPart = node[2];
+						var elsePart = node[3] || ['.unit'];
+						var fCont = mtf();
+						var tCond = mt();
+						return [['.fn', ['.list', fCont], 
+							cps(condition, ['.fn', ['.list', tCond],
+								['.if', tCond, 
+									cps(thenPart, ContinuationResend(fCont)),
+									cps(elsePart, ContinuationResend(fCont))]
 							])
-						}
-						case '.obj' : {
-							return cpsObject(node, continuation)
-						}
-						default : {
-							return cpsStandard(node, continuation, 1, false)
-						}
+						], continuation]
 					}
+					case '&&' : {
+						var left = node[1];
+						var right = node[2];
+						var tl = mt();
+						var tr = mt();
+						var fCont = mtf();
+						return ['.seq', 
+							[['.fn', ['.list', fCont], cps(left, ['.fn', ['.list', tl], 
+								['.if', tl, 
+									cps(right, ['.fn', ['.list', tr], [fCont, ['&&', tl, tr]]]), 
+									[fCont, tl]
+								]
+							])], continuation]
+						]
+					}
+					case '||' : {
+						var left = node[1];
+						var right = node[2];
+						var tl = mt();
+						var tr = mt();
+						var fCont = mtf();
+						return ['.seq', 
+							[['.fn', ['.list', fCont], cps(left, ['.fn', ['.list', tl], 
+								['.if', tl, 
+									[fCont, tl],
+									cps(right, ['.fn', ['.list', tr], [fCont, ['||', tl, tr]]])
+								]
+							])], continuation]
+						]
+					}
+					case '.try' : {
+						// .try nodes are transformed into schema method call passing 2 arguments: fTry and fCatch
+						// representing the try block and the catch block respectively.
+						var normalPart = node[1];
+						var tException = node[2];
+						var exceptionPart = node[3];
+						var fCont = mtf();
+						return ['.seq', 
+							[['.fn', ['.list', fCont], 
+								[['.', tSchema, ['.lit', 'try']],  
+									['.fn', ['.list', tSchema], 
+										cps(normalPart, ContinuationResend(fCont))], 
+									['.fn', ['.list', tSchema, tException], 
+										cps(exceptionPart, ContinuationResend(fCont))]
+								]
+							], continuation],
+						]
+					}
+					case '.while' : {
+						// A .while Node is transformed into a recursive function IIFE.
+						var condition = node[1];
+						var body = node[2];
+						var fCont = mtf();
+						var fLoop = mtf();
+						var tCond = mt();
+						var tB = mt();
+						return ['.seq', 
+							['.declare', fLoop],
+							[['=', fLoop, ['.fn', ['.list', fCont], 
+								cps(condition, ['.fn', ['.list', tCond],
+									['.if', tCond, 
+										cps(body, ['.fn', ['.list', tB], [fLoop, fCont]]),
+										['.return', [fCont]]]
+								])
+							]], continuation],
+						]
+					}
+					case '.label' : {
+						var label = node[1];
+						var body = node[2]
+						var tBody = mt();
+						var fStmt = mtf();
+						var fLabel = (typeof label === 'string' ? ['.t', 'cpl' + label] : label)
+						return ['.seq', 
+							['.declare', fStmt],
+							['.declare', fLabel],
+							['=', fStmt, ['.fn', ['.list'], 
+								cps(body, Continuation(tBody, ['.return', [fLabel, tBody]]))
+							]],
+							['=', fLabel, continuation],
+							['.return', [fStmt]]
+						]
+					}
+					case '.break' : {
+						return ['.return', [(typeof node[1] === 'string' ? ['.t', 'cpl' + node[1]] : node[1])]]
+					}
+					case '.doblock' : {
+						return [['.', tSchema, ['.lit', 'doblock']], cpstfm(node[1]), continuation]
+					}
+					case '.return' : {
+						var t = mt();
+						return cps(node[1], Continuation(t, ['.return', [['.', tSchema, ['.lit', 'return']], t]]))
+					}
+					case '.obj' : {
+						return cpsObject(node, continuation)
+					}
+					default : {
+						return cpsStandard(node, continuation, 1, false)
+					}
+				}
+			} else if(nodeIsOperation(node)) {
+				if(node[0] === '.local') {
+					return ['.seq', node, continuation[2]]
 				} else {
-					if(node[0] === '.local') {
-						return ['.seq', node, continuation[2]]
-					} else {
-						return assignCont(cpstfm(node), continuation)
-					}
+					return assignCont(cpstfm(node), continuation)
 				}
 			} else if(node instanceof Array && node.needsCPS) {
 				return cpsStandard(node, continuation, 0, true)
@@ -251,9 +271,7 @@ exports.Pass = function(config) {
 		};
 		
 		var tSchema = mts();
-		var contFinish = ['.fn', ['.list', mt()], [
-			['.', tSchema, ['.lit', 'return']]
-		]];
+		var contFinish =  Continuation(mt(), [['.', tSchema, ['.lit', 'return']]]);
 		return ['.fn', ['.list', tSchema], ['.return', ['.fn', fn[1], cps(fn[2], contFinish)]]]
 	}
 	var cpstfm = function(node) {

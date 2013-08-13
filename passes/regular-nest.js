@@ -46,6 +46,10 @@ exports.Pass = function(config) {
 				X[2] = bv(t, X[2])
 				return X;
 			}
+			case '.unit' :
+			case '.declare' : {
+				return X
+			}
 			default : {
 				return ['=', t, X]
 			}
@@ -114,6 +118,11 @@ exports.Pass = function(config) {
 				return node
 			}
 			case '.seq' : {
+				if(node.length === 1) {
+					return ['.unit']
+				} else if(node.length === 2) {
+					return rn(node[1])
+				}
 				for(var j = 1; j < node.length; j++) {
 					node[j] = rn(node[j])
 				}

@@ -11,7 +11,7 @@ var formAssignment = require('../common/patterns').formAssignment
 
 exports.Pass = APassFor('.fn', function(node){
 	var parameters = node[1];
-	var body = node[2];
+	var body = ['.seq', node[2]];
 	if(!(parameters instanceof Array && parameters.length === 0) && (!nodeIsOperation(parameters) || parameters[0] !== '.list')) {
 		/// functions with parameter involving the whole arguments
 		body = ['.seq', formAssignment(parameters, ['.args'], true, true), body]
@@ -58,7 +58,7 @@ exports.Pass = APassFor('.fn', function(node){
 			body = ['.seq', sBindings, body];
 			return ['.fn', parameters, body]
 		} else {
-			return node;
+			return ['.fn', parameters, body];
 		}
 	}
 })

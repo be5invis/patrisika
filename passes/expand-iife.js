@@ -58,7 +58,7 @@ exports.Pass = function(config) {
 				/// A. An IIFE which its callee does not have nested scopes.
 				/// B. An IIFE with NO parameters and NO local variables.
 
-				if((!fn.scope.children.length || (!fn.scope.locals.length && fn[1].length === 1 && node.length === 1))) {
+				if(fn.scope && (!fn.scope.children.length || (!fn.scope.locals.length && fn[1].length === 1 && node.length === 1))) {
 					///IIFE expansion
 					var t = mt();   // T for return value
 					var l = ml();   // T for label
