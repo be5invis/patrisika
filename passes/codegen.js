@@ -131,6 +131,11 @@ exports.Pass = function(config) {
 			elements: ArgsToArray(arguments).map(transform)
 		}
 	}
+	nodeTransformFunctions['.this'] = function(){
+		return {
+			type: 'ThisExpression'
+		}
+	}
 	nodeTransformFunctions['.seq'] = function(){
 		return {
 			type: 'BlockStatement',

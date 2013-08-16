@@ -11,7 +11,7 @@ var Declaration = function(name, isParameter, isConstant){
 	this.isParameter = isParameter;
 	this.isConstant = isConstant;
 }
-var Scope = function(parent){
+var Scope = function(parent, isGenerated){
 	if(parent){
 		this.declarations = Object.create(parent.declarations)
 		parent.children.push(this);
@@ -19,10 +19,12 @@ var Scope = function(parent){
 	} else {
 		this.declarations = new Hash();
 	}
+	this.isGenerated = isGenerated;
 	this.children = []
 	this.uses = new Hash();
 }
 Scope.prototype.useVariable = function(name, nodeAround) {
+	if(this.isGenerated && this.parent) return this.parent.useVariable(name, nodeAround);
 	this.uses.put(name, {link: null, loc: nodeAround})
 	return new Symbol(this, name)
 }

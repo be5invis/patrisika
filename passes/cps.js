@@ -85,11 +85,11 @@ exports.Pass = function(config) {
 		}
 	}
 	var Continuation = function(t, body) {
-		return ['.fn', ['.list', t], body]
+		return ['.fn', ['.list', t], body, true]
 	}
 	var ContinuationResend = function(c) {
 		var t = mt();
-		return ['.fn', ['.list', t], ['.return', [c, t]]]
+		return ['.fn', ['.list', t], ['.return', [c, t]], true]
 	}
 	var generateCPSForFn = function(fn) {
 		var assignCont = function(node, continuation) {
@@ -97,19 +97,19 @@ exports.Pass = function(config) {
 		//	return [continuation, node]
 		}
 		var cpsStandard = function(node, continuation, jStart, checkFirstIsMemberNode){
-			var c = assignCont(node, continuation);
+			var nodeClone = node.slice(0);
+			var c = assignCont(nodeClone, continuation);
 			for(var j = node.length - 1; j >= jStart; j--) {
 				if(j === jStart && checkFirstIsMemberNode && nodeIsOperation(node[j]) && node[j][0] === '.') {
-					var t = mt();
-					c = cps(node[j][2], Continuation(t, c))
-					node[j][2] = t;
-					var t = mt();
-					c = cps(node[j][1], Continuation(t, c))
-					node[j][1] = t;
+					var t2 = mt();
+					c = cps(node[j][2], Continuation(t2, c))
+					var t1 = mt();
+					c = cps(node[j][1], Continuation(t1, c))
+					nodeClone[j] = ['.', t1, t2]
 				} else {
 					var t = mt();
 					c = cps(node[j], Continuation(t, c))
-					node[j] = t;
+					nodeClone[j] = t;
 				}
 			}
 			return c;
@@ -128,6 +128,7 @@ exports.Pass = function(config) {
 				switch(node[0]) {
 					case '.lit' :
 					case '.t' :
+					case '.this' :
 					case '.unit' : {
 						return assignCont(node, continuation)
 					}
@@ -153,8 +154,10 @@ exports.Pass = function(config) {
 							cps(condition, ['.fn', ['.list', tCond],
 								['.if', tCond, 
 									cps(thenPart, ContinuationResend(fCont)),
-									cps(elsePart, ContinuationResend(fCont))]
-							])
+									cps(elsePart, ContinuationResend(fCont))],
+								true
+							]),
+							true
 						], continuation]
 					}
 					case '&&' : {
@@ -166,10 +169,11 @@ exports.Pass = function(config) {
 						return ['.seq', 
 							[['.fn', ['.list', fCont], cps(left, ['.fn', ['.list', tl], 
 								['.if', tl, 
-									cps(right, ['.fn', ['.list', tr], [fCont, ['&&', tl, tr]]]), 
+									cps(right, ['.fn', ['.list', tr], [fCont, ['&&', tl, tr]], true]), 
 									[fCont, tl]
-								]
-							])], continuation]
+								],
+								true
+							]), true], continuation]
 						]
 					}
 					case '||' : {
@@ -182,9 +186,10 @@ exports.Pass = function(config) {
 							[['.fn', ['.list', fCont], cps(left, ['.fn', ['.list', tl], 
 								['.if', tl, 
 									[fCont, tl],
-									cps(right, ['.fn', ['.list', tr], [fCont, ['||', tl, tr]]])
-								]
-							])], continuation]
+									cps(right, ['.fn', ['.list', tr], [fCont, ['||', tl, tr]], true])
+								],
+								true
+							]), true], continuation]
 						]
 					}
 					case '.try' : {
@@ -198,10 +203,11 @@ exports.Pass = function(config) {
 							[['.fn', ['.list', fCont], 
 								[['.', tSchema, ['.lit', 'try']],  
 									['.fn', ['.list', tSchema], 
-										cps(normalPart, ContinuationResend(fCont))], 
+										cps(normalPart, ContinuationResend(fCont)), true], 
 									['.fn', ['.list', tSchema, tException], 
-										cps(exceptionPart, ContinuationResend(fCont))]
-								]
+										cps(exceptionPart, ContinuationResend(fCont)), true]
+								],
+								true
 							], continuation],
 						]
 					}
@@ -218,9 +224,11 @@ exports.Pass = function(config) {
 							[['=', fLoop, ['.fn', ['.list', fCont], 
 								cps(condition, ['.fn', ['.list', tCond],
 									['.if', tCond, 
-										cps(body, ['.fn', ['.list', tB], [fLoop, fCont]]),
-										['.return', [fCont]]]
-								])
+										cps(body, ['.fn', ['.list', tB], ['.return', [fLoop, fCont]], true]),
+										['.return', [fCont]]],
+									true
+								]),
+								true
 							]], continuation],
 						]
 					}
@@ -230,15 +238,9 @@ exports.Pass = function(config) {
 						var tBody = mt();
 						var fStmt = mtf();
 						var fLabel = (typeof label === 'string' ? ['.t', 'cpl' + label] : label)
-						return ['.seq', 
-							['.declare', fStmt],
-							['.declare', fLabel],
-							['=', fStmt, ['.fn', ['.list'], 
-								cps(body, Continuation(tBody, ['.return', [fLabel, tBody]]))
-							]],
-							['=', fLabel, continuation],
-							['.return', [fStmt]]
-						]
+						return [['.fn', ['.list', fLabel], 
+							cps(body, Continuation(tBody, ['.return', [fLabel, tBody]])), true
+						], continuation]
 					}
 					case '.break' : {
 						return ['.return', [(typeof node[1] === 'string' ? ['.t', 'cpl' + node[1]] : node[1])]]

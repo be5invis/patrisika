@@ -13,7 +13,7 @@ exports.Pass = function(config) {
 		if(!node) return node;
 		if(nodeIsOperation(node)) {
 			if(node[0] === '.fn') {
-				var subScope = new Scope(scope);
+				var subScope = new Scope(scope, !!node[3]);
 				for(var j = 1; j < node[1].length; j++) if(typeof node[1][j] === 'string') {
 					subScope.declare(node[1][j], true, true)
 				}
@@ -21,16 +21,20 @@ exports.Pass = function(config) {
 				node.scope = subScope;
 				return node;
 			} else if(node[0] === '.declare' && typeof node[1] === 'string') {
-				if(scope.declarations.has(node[1]) && scope.declarations.get(node[1]).isConstant) {
+				var s = scope;
+				while(s.parent && s.isGenerated) s = s.parent;
+				if(s.declarations.has(node[1]) && s.declarations.get(node[1]).isConstant) {
 					throw config.createError("Attempt to redefine constant " + node[1], node)
 				}
-				scope.declare(node[1], false, false)
+				s.declare(node[1], false, false)
 				return ['.unit']
 			} else if(node[0] === '=c' && typeof node[1] === 'string') {
-				if(scope.declarations.has(node[1])) {
+				var s = scope;
+				while(s.parent && s.isGenerated) s = s.parent;
+				if(s.declarations.has(node[1])) {
 					throw config.createError("Attempt to redefine constant " + node[1], node)
 				} else {
-					scope.declare(node[1], false, true)
+					s.declare(node[1], false, true)
 				}
 				return ['=c', node[1], extractDeclarations(node[2], scope)]
 			} else {
@@ -85,7 +89,9 @@ exports.Pass = function(config) {
 			} else if(config.explicit) {
 				throw config.createError("Undeclared vairable " + name, usage.loc || null);
 			} else {
-				scope.declarations.put(name, new Declaration(name, false, false));
+				var s = scope;
+				while(s.parent && s.isGenerated) s = s.parent;
+				s.declarations.put(name, new Declaration(name, false, false));
 				usage.link = scope.declarations.get(name)
 			}
 		});
