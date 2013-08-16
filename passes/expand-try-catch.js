@@ -1,5 +1,7 @@
 /// Pass Expand Try-catch
 /// abbr. xtc
+/// In this pass we convert the 2nd argument of .try nodes into
+/// a .t node.
 
 var APassFor = require('../common/pass').APassFor
 var mt = require('../common/tempname').TMaker('xtc')

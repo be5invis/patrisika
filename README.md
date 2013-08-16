@@ -8,7 +8,9 @@ Current Passes
 
 ###Early Semantic Expansion
 - **expand-fn-literal** : Expand irregular and optional parameters of function literals
+- **expand-try-catch** : Regularize the 2nd argument of `[.try]` nodes
 - **expand-assignments** : Expand irregular assignments
+- **expand-this** : Expand `[.this]` nodes into `[.t]` nodes
 
 ###Variable Scoping
 - **resolve-variable-scoping** : Create `[.local]` nodes to handle variable declarations, constant declarations, and variable renaming.

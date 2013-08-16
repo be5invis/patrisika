@@ -1,3 +1,10 @@
+/// Pass expand this
+/// abbr. xti
+/// In this pass we convert .this nodes into .t nodes
+/// And add a [= [.t] [.this]] node in the beginning of
+/// functions containing [.this] nodes
+
+
 var recurse = require('../common/node-types.js').recurse
 var nodeIsOperation = require('../common/node-types').nodeIsOperation
 var Hash = require('../common/hash').Hash
