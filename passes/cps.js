@@ -1,7 +1,11 @@
+/// WARHING! THIS PASS IS BLACK MAGIC. IT IS EXORDINARY DANGEROUS AND MAY
+/// POTENTIALLY DAMAGE YOUR MIND. DO NOT TOUCH UNLESS YOU KNOW EXACTLY HOW IT 
+/// WORKS.
+
 /// Pass CPS transform.
 /// abbr. cps
 /// In this pass, we will convert functions containing '.bind' operator
-/// into a CPS transformed form
+/// into a CPS transformed form.
 
 var Hash = require('../common/hash').Hash
 var nodeIsStatemental = require('../common/node-types').nodeIsStatemental
@@ -93,8 +97,12 @@ exports.Pass = function(config) {
 	}
 	var generateCPSForFn = function(fn) {
 		var assignCont = function(node, continuation) {
-			return ['.seq', ['.declare', continuation[1][1]], ['=', continuation[1][1], node], continuation[2]]
-		//	return [continuation, node]
+			return [continuation, node];
+			if(continuation[0] === '.fn' && continuation[1].length === 2) {
+				return ['.seq', ['.declare', continuation[1][1]], ['=', continuation[1][1], node], continuation[2]]
+			} else {
+				return [continuation, node]
+			}
 		}
 		var cpsStandard = function(node, continuation, jStart, checkFirstIsMemberNode){
 			var nodeClone = node.slice(0);
@@ -153,8 +161,8 @@ exports.Pass = function(config) {
 						return [['.fn', ['.list', fCont], 
 							cps(condition, ['.fn', ['.list', tCond],
 								['.if', tCond, 
-									cps(thenPart, ContinuationResend(fCont)),
-									cps(elsePart, ContinuationResend(fCont))],
+									['.return', cps(thenPart, fCont)],
+									['.return', cps(elsePart, fCont)]],
 								true
 							]),
 							true
@@ -203,9 +211,9 @@ exports.Pass = function(config) {
 							[['.fn', ['.list', fCont], 
 								[['.', tSchema, ['.lit', 'try']],  
 									['.fn', ['.list', tSchema], 
-										cps(normalPart, ContinuationResend(fCont)), true], 
+										cps(normalPart, fCont), true], 
 									['.fn', ['.list', tSchema, tException], 
-										cps(exceptionPart, ContinuationResend(fCont)), true]
+										cps(exceptionPart, fCont), true]
 								],
 								true
 							], continuation],

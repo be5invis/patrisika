@@ -89,6 +89,7 @@ exports.Pass = function(config) {
 	var binop = binopoid('BinaryExpression')
 	var assop = binopoid('AssignmentExpression')
 	var logop = binopoid('LogicalExpression')
+	
 	binop('+')
 	binop('-')
 	binop('*')
@@ -105,6 +106,44 @@ exports.Pass = function(config) {
 	logop('&&')
 	logop('||')
 	assop('=')
+/***
+	nodeTransformFunctions['+'] = function(left, right){
+		// '+' operator always returns a number
+		return {
+			type: 'BinaryExpression',
+			operator: '+',
+			left: {
+				type: 'UnaryExpression',
+				operator: '+',
+				prefix: true,
+				argument: transform(left)
+			},
+			right: {
+				type: 'UnaryExpression',
+				operator: '+',
+				prefix: true,
+				argument: transform(right)
+			}
+		}
+	}
+	nodeTransformFunctions['++'] = function(left, right){
+		// '++' operator always returns a string
+		return {
+			type: 'BinaryExpression',
+			operator: '+',
+			left: {
+				type: 'BinaryExpression',
+				operator: '+',
+				left: {
+					type: 'Literal',
+					value: ""
+				},
+				right: transform(left)
+			},
+			right: transform(right)
+		}
+	}
+***/
 	nodeTransformFunctions['.'] = function(left, right){
 		return {
 			type: 'MemberExpression',
