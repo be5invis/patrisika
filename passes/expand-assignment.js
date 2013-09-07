@@ -10,6 +10,14 @@ var recurse = require('../common/node-types').recurse
 var nodeIsOperation = require('../common/node-types').nodeIsOperation
 var formAssignment = require('../common/patterns').formAssignment
 
-exports.Pass = APassFor('=', function(node){
-	return formAssignment(node[1], node[2], node[3], node[4])
+exports.Pass = APassFor({
+	'=' : function(node){
+		return formAssignment(node[1], node[2], false, false)
+	},
+	'.var' : function(node){
+		return formAssignment(node[1], node[2], true, false)
+	},
+	'.def' : function(node){
+		return formAssignment(node[1], node[2], true, true)
+	}
 });

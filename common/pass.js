@@ -14,26 +14,33 @@ var composite = function(passes, config){
 }
 exports.composite = composite;
 
-var APassFor = function(type, handler){
+var APassFor = function(_handlers){
+	var types = []
+	var handlers = []
+	for(var type in _handlers) if(_handlers[type] instanceof Function) {
+		types.push(type);
+		handlers.push(_handlers[type]);
+	}
 	return function(config) {
 		var f = function(node){
 			if(!(node instanceof Array)) return node;
 			recurse(node, f);
-			if(node[0] === type) {
-				try {
-					return handler(node)
-				} catch(situation) {
-					if(situation instanceof Array){
-						throw config.createError(situation[0], situation[1] || node)
-					} else if(typeof situation === 'string') {
-						throw config.createError(situation, node)
-					} else {
-						throw situation
-					}
+			for(var k = 0; k < types.length; k++) {
+				if(node[0] === types[k]) {
+					try {
+						return handlers[k](node)
+					} catch(situation) {
+						if(situation instanceof Array){
+							throw config.createError(situation[0], situation[1] || node)
+						} else if(typeof situation === 'string') {
+							throw config.createError(situation, node)
+						} else {
+							throw situation
+						}
+					}					
 				}
-			} else {
-				return node;
 			}
+			return node;
 		}
 
 		return f;

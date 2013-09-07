@@ -8,7 +8,7 @@ var mt = require('../common/tempname').TMaker('xol');
 var nodeIsOperation = require('../common/node-types.js').nodeIsOperation;
 var recurse = require('../common/node-types.js').recurse;
 
-exports.Pass = APassFor('.obj', function(node){
+exports.Pass = APassFor({'.obj' : function(node){
 	var foundAccessorProperty = false;
 	var foundIrregularAccessorBind = false;
 	for(var j = 1; j < node.length; j++){
@@ -68,4 +68,4 @@ exports.Pass = APassFor('.obj', function(node){
 	} else {
 		return node;
 	}
-});
+}});

@@ -1,4 +1,4 @@
-/// WARHING! THIS PASS IS BLACK MAGIC. IT IS EXORDINARY DANGEROUS AND MAY
+/// WARNING! THIS PASS IS BLACK MAGIC. IT IS EXORDINARY DANGEROUS AND MAY
 /// POTENTIALLY DAMAGE YOUR MIND. DO NOT TOUCH UNLESS YOU KNOW EXACTLY HOW IT 
 /// WORKS.
 
@@ -96,9 +96,9 @@ exports.Pass = function(config) {
 		return ['.fn', ['.list', t], ['.return', [c, t]], true]
 	}
 	var generateCPSForFn = function(fn) {
-		var assignCont = function(node, continuation) {
-			return [continuation, node];
-			if(continuation[0] === '.fn' && continuation[1].length === 2) {
+		var cpsBind = function(node, continuation) {
+//			return [continuation, node];
+			if(continuation[0] === '.fn' && continuation[1] && continuation[1].length === 2 && continuation[1][0] === '.list') {
 				return ['.seq', ['.declare', continuation[1][1]], ['=', continuation[1][1], node], continuation[2]]
 			} else {
 				return [continuation, node]
@@ -106,7 +106,7 @@ exports.Pass = function(config) {
 		}
 		var cpsStandard = function(node, continuation, jStart, checkFirstIsMemberNode){
 			var nodeClone = node.slice(0);
-			var c = assignCont(nodeClone, continuation);
+			var c = cpsBind(nodeClone, continuation);
 			for(var j = node.length - 1; j >= jStart; j--) {
 				if(j === jStart && checkFirstIsMemberNode && nodeIsOperation(node[j]) && node[j][0] === '.') {
 					var t2 = mt();
@@ -123,7 +123,7 @@ exports.Pass = function(config) {
 			return c;
 		}
 		var cpsObject = function(node, continuation){
-			var c = assignCont(node, continuation);
+			var c = cpsBind(node, continuation);
 			for(var j = node.length - 1; j >= 1; j--) {
 				var t = mt();
 				c = cps(node[j][1], Continuation(t, c))
@@ -131,6 +131,8 @@ exports.Pass = function(config) {
 			}
 			return c;
 		}
+		// cps(node, continuation) means that "bring the result of evaluating <node> to <continuation>"
+		// continuation is a function node which takes one argument.
 		var cps = function(node, continuation) {
 			if(nodeIsOperation(node) && node.needsCPS) {
 				switch(node[0]) {
@@ -138,7 +140,7 @@ exports.Pass = function(config) {
 					case '.t' :
 					case '.this' :
 					case '.unit' : {
-						return assignCont(node, continuation)
+						return cpsBind(node, continuation)
 					}
 					case '=' : {
 						if(typeof node[1] === 'string') {
@@ -263,6 +265,15 @@ exports.Pass = function(config) {
 					case '.obj' : {
 						return cpsObject(node, continuation)
 					}
+					case '.seq' : {
+						if(node.length <= 1) {
+							return cps(['.unit'], continuation)
+						} else if(node.length <= 2) {
+							return cps(node[1], continuation)
+						} else {
+							return cpsStandard(node, continuation, 1, false)
+						}
+					}
 					default : {
 						return cpsStandard(node, continuation, 1, false)
 					}
@@ -271,12 +282,12 @@ exports.Pass = function(config) {
 				if(node[0] === '.local') {
 					return ['.seq', node, continuation[2]]
 				} else {
-					return assignCont(cpstfm(node), continuation)
+					return cpsBind(cpstfm(node), continuation)
 				}
 			} else if(node instanceof Array && node.needsCPS) {
 				return cpsStandard(node, continuation, 0, true)
 			} else {
-				return assignCont(cpstfm(node), continuation)
+				return cpsBind(cpstfm(node), continuation)
 			}
 		};
 		
