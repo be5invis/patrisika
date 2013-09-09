@@ -143,7 +143,7 @@ exports.Pass = function(config) {
 						return cpsBind(node, continuation)
 					}
 					case '=' : {
-						if(typeof node[1] === 'string') {
+						if(typeof node[1] === 'string' || nodeIsOperation(node[1]) && node[1][0] === '.t') {
 							var t = mt();
 							return cps(node[2], Continuation(t, ['=', node[1], t]))
 						} else {
@@ -293,7 +293,7 @@ exports.Pass = function(config) {
 		
 		var tSchema = mts();
 		var contFinish =  Continuation(mt(), [['.', tSchema, ['.lit', 'return']]]);
-		return ['.fn', ['.list', tSchema], ['.return', ['.fn', fn[1], cps(fn[2], contFinish)]]]
+		return ['.obj', ['build', ['.fn', ['.list', tSchema], ['.return', ['.fn', fn[1], cps(fn[2], contFinish)]]]]]
 	}
 	var cpstfm = function(node) {
 		if(!node) return node;

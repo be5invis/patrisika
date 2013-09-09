@@ -7,6 +7,24 @@ var Declaration = require('../common/scope').Declaration
 var Scope = require('../common/scope').Scope
 
 exports.Pass = function(config) {
+	/// Pass rvs-0: Extract external declarations from AST
+	var extractExterns = function(node, globalScope) {
+		if(!node) return node;
+		if(nodeIsOperation(node)) {
+			if(node[0] === '.extern' && typeof node[1] === 'string') {
+				globalScope.declare(node[1], 0, 0)
+				return ['.unit']
+			} else {
+				recurse(node, extractExterns, globalScope)
+				return node;
+			}
+		} else if(node instanceof Array) {
+			recurse(node, extractExterns, globalScope)
+			return node;
+		} else {
+			return node;
+		}		
+	}
 	/// Pass rvs-1: Extract variable declarations from AST
 	/// With constructing scope objects.
 	var extractDeclarations = function(node, scope){
@@ -147,7 +165,8 @@ exports.Pass = function(config) {
 	}
 	return function(node){
 		var global = config.globalScope || new Scope;
-		var r = extractDeclarations(node, global)
+		var r = extractExterns(node, global);
+		r = extractDeclarations(r, global)
 		r = checkUsages(r, global)
 		duv(global);
 		renameVariable(global);

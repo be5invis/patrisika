@@ -25,25 +25,28 @@ var DefaultConfig = function(){
 	config.enableIIFEExpandExecuteOnce = false;
 	return config;
 }
+exports.Config = DefaultConfig;
+var USE_STRICT_NODE = {
+	type: 'ExpressionStatement',
+	expression: {
+		type: 'Literal',
+		value: "use strict"
+	}
+};
 exports.transform = function(ast, config) {
 	var config = config || DefaultConfig();
 	var flowGeneratingPTAst = passOrd.composite([xa, xtc, xfl, xol, cb, xti, cps, rvs, ceqc, xi, ds, rn, rts, ds], config);
 	var flowTransformation = passOrd.composite([codegen], config);
 	var ptAst = [flowGeneratingPTAst(['.fn', ['.list'], ast])];
 	var smAst = flowTransformation(ptAst);
-	smAst = {type: 'Program', body: [
-		{
-			type: 'ExpressionStatement',
-			expression: {
-				type: 'Literal',
-				value: "use strict"
-			}
-		},
-		{
-			type: 'ExpressionStatement',
-			expression: smAst
-		}
-	]}
+	if(config.piece && smAst.expression.callee && smAst.expression.callee.type === 'FunctionExpression') {
+		smAst = smAst.expression.callee.body;
+		smAst.body.unshift(USE_STRICT_NODE);
+		smAst = {type: 'Program', body: smAst.body}
+	} else {
+		smAst = {type: 'Program', body: [USE_STRICT_NODE, smAst]}
+	}
+
 	return {
 		patrisikaAst: ptAst,
 		spidermonkeyAst: smAst

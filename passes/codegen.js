@@ -258,5 +258,5 @@ exports.Pass = function(config) {
 		}
 	}
 
-	return transform
+	return aStatement
 }

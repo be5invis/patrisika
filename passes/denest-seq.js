@@ -37,5 +37,7 @@ exports.Pass = function(config) {
 		}
 	}
 
-	return ds;
+	return function(node){
+		return ds(node)
+	};
 }

@@ -101,7 +101,7 @@ exports.Pass = function(config) {
 	}
 	var rn = function(node){
 		if(!node || typeof node === 'string') return node;
-		if(typeof node[0] !== 'string') return rnRegular(node, 0, CHECK_FIRST_SUBITEM_IS_MEMBERING);
+		if(!nodeIsOperation(node)) return rnRegular(node, 0, CHECK_FIRST_SUBITEM_IS_MEMBERING);
 		switch(node[TYPE]) {
 			case '.lit' :
 			case '.break' :
@@ -189,7 +189,19 @@ exports.Pass = function(config) {
 				}
 			}
 			case '=' : {
-				return rnRegular(node, 1, CHECK_FIRST_SUBITEM_IS_MEMBERING);
+				if(typeof node[1] === 'string' || nodeIsOperation(node[1]) && node[1][0] === '.t') {
+					node[2] = rn(node[2]);
+					if(nodeIsStatemental(node[2])) {
+						var t = mt();
+						var binding = bv(t, node[2]);
+						node[2] = t;
+						return ['.seq', ['.declare', t], binding, node]
+					} else {
+						return node;
+					}
+				} else {
+					return rnRegular(node, 1, CHECK_FIRST_SUBITEM_IS_MEMBERING);
+				}
 			}
 			default : return rnRegular(node, 1);
 		}
