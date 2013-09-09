@@ -106,6 +106,15 @@ exports.Pass = function(config) {
 	logop('&&')
 	logop('||')
 	assop('=')
+
+	nodeTransformFunctions['!'] = function(argument) {
+		return {
+			type: "UnaryExpression",
+			operator: "!",
+			prefix: true,
+			argument: transform(argument)
+		}
+	}
 /***
 	nodeTransformFunctions['+'] = function(left, right){
 		// '+' operator always returns a number
