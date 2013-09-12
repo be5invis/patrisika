@@ -139,6 +139,7 @@ exports.Pass = function(config) {
 					case '.lit' :
 					case '.t' :
 					case '.this' :
+					case '.declare' :
 					case '.unit' : {
 						return cpsBind(node, continuation)
 					}

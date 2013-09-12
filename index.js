@@ -16,10 +16,19 @@ var rn = require('./passes/regular-nest');
 var ds = require('./passes/denest-seq');
 var rts = require('./passes/resolve-t-scoping');
 var codegen = require('./passes/codegen');
+var print = require('./passes/print');
 
-var DefaultConfig = function(){
+var DefaultGlobalScope = function() {
+	var s = new Scope();
+	s.declare('Object', false, false, ['.x', 'Object']);
+	s.declare('Function', false, false, ['.x', 'Function']);
+	s.declare('undefined', false, false, ['.unit']);
+	return s;
+}
+
+var DefaultConfig = function(gs){
 	var config = {}
-	config.globalScope = new Scope();
+	config.globalScope = gs || DefaultGlobalScope();
 	config.createError = Warning(null);
 	config.enableIIFEExpand = true;
 	config.enableIIFEExpandExecuteOnce = false;
@@ -35,7 +44,7 @@ var USE_STRICT_NODE = {
 };
 exports.transform = function(ast, config) {
 	var config = config || DefaultConfig();
-	var flowGeneratingPTAst = passOrd.composite([xa, xtc, xfl, xol, cb, xti, cps, rvs, ceqc, xi, ds, rn, rts, ds], config);
+	var flowGeneratingPTAst = passOrd.composite([xa, xtc, xfl, xol, xti, cps, rvs, ceqc, cb, xi, rn, rts, ds], config);
 	var flowTransformation = passOrd.composite([codegen], config);
 	var ptAst = [flowGeneratingPTAst(['.fn', ['.list'], ast])];
 	var smAst = flowTransformation(ptAst);

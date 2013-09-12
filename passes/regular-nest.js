@@ -8,7 +8,9 @@ var Hash = require('../common/hash').Hash
 var nodeIsStatemental = require('../common/node-types').nodeIsStatemental
 var nodeIsLiteral = require('../common/node-types').nodeIsLiteral
 var nodeIsOperation = require('../common/node-types').nodeIsOperation
+var nodeIsName = require('../common/node-types').nodeIsName
 var cloneNode = require('../common/clone-node').cloneNode
+var Symbol = require('../common/scope').Symbol
 
 var TYPE = 0
 
@@ -100,13 +102,14 @@ exports.Pass = function(config) {
 		return a;
 	}
 	var rn = function(node){
-		if(!node || typeof node === 'string') return node;
+		if(!node || typeof node === 'string' || node instanceof Symbol) return node;
 		if(!nodeIsOperation(node)) return rnRegular(node, 0, CHECK_FIRST_SUBITEM_IS_MEMBERING);
 		switch(node[TYPE]) {
 			case '.lit' :
 			case '.break' :
 			case '.id' :
-			case '.t' : {
+			case '.t' :
+			case '.x' : {
 				return node
 			}
 			case '.fn' : {
@@ -189,7 +192,7 @@ exports.Pass = function(config) {
 				}
 			}
 			case '=' : {
-				if(typeof node[1] === 'string' || nodeIsOperation(node[1]) && node[1][0] === '.t') {
+				if(nodeIsName(node[1])) {
 					node[2] = rn(node[2]);
 					if(nodeIsStatemental(node[2])) {
 						var t = mt();

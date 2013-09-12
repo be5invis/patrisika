@@ -8,12 +8,19 @@ var nodeTransformFunctions = {}
 var nodeIsStatemental = require('../common/node-types.js').nodeIsStatemental;
 var encodeCommonNames = require('../common/tempname').encodeCommonNames
 var encodeTNames = require('../common/tempname').encodeTNames
+var Symbol = require('../common/scope').Symbol
 
 exports.Pass = function(config) {
 	var transform = function(node){
 		if(!node) throw 'ERROR!'
 		if(typeof node === 'string') {
 			return {type: 'Identifier', name: encodeCommonNames(node)};
+		}
+		if(node instanceof Symbol) {
+			return {
+				type: 'Identifier', 
+				name: node.writeBack()
+			}
 		}
 		if((typeof node[0] === 'string') && (typeof nodeTransformFunctions[node[0]] === 'function')) {
 			return nodeTransformFunctions[node[0]].apply(null, node.slice(1));
@@ -43,6 +50,9 @@ exports.Pass = function(config) {
 	}
 	nodeTransformFunctions['.t'] = function(name){
 		return {type: 'Identifier', name: encodeTNames(name)}
+	}
+	nodeTransformFunctions['.x'] = function(name){
+		return {type: 'Identifier', name: name}
 	}
 	nodeTransformFunctions['.unit'] = function(name){
 		return {type: 'UnaryExpression', operator:'void', prefix: true, argument: {type: 'Literal', value: 0}}
@@ -103,6 +113,7 @@ exports.Pass = function(config) {
 	binop('!=', '!==')
 	binop('=~', '==')
 	binop('!~', '!=')
+	binop('.is', 'instanceof')
 	logop('&&')
 	logop('||')
 	assop('=')
@@ -182,6 +193,13 @@ exports.Pass = function(config) {
 	nodeTransformFunctions['.this'] = function(){
 		return {
 			type: 'ThisExpression'
+		}
+	}
+	nodeTransformFunctions['.new'] = function(fn){
+		return {
+			type: 'NewExpression',
+			callee: transform(fn),
+			arguments: ArgsToArray(arguments).slice(1).map(transform)
 		}
 	}
 	nodeTransformFunctions['.seq'] = function(){

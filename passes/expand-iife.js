@@ -4,6 +4,7 @@ var recurse = require('../common/node-types.js').recurse
 var nodeIsOperation = require('../common/node-types').nodeIsOperation
 var formAssignment = require('../common/patterns').formAssignment
 var util = require('util')
+var Symbol = require('../common/scope').Symbol
 
 exports.Pass = function(config) {
 	var mt = require('../common/tempname').TMaker('xit');
@@ -17,9 +18,9 @@ exports.Pass = function(config) {
 				return node;
 			} else if(node[0] === '.local') {
 				// [.local alpha beta] -> [.seq [.local alpha beta] [= alpha [.unit]] [= beta [.unit]]]
-				return ['.seq', node].concat(node.slice(1).map(function(name){
-						return ['=', name, ['.unit']]
-				}))
+				return ['.seq', node, node.slice(1).reduceRight(function(existing, name){
+						return ['=', name, existing]
+				}, ['.unit'])]
 			} else if(node[0] === '.return') {
 				aux.hasReturn = true;
 				return ['.seq', 
@@ -80,7 +81,7 @@ exports.Pass = function(config) {
 							var s = ['.seq', ['.unit']]
 							var l = ['.local']
 							for(var j = 0; j < parameters.length; j++) {
-								if(typeof parameters[j] === 'string') l.push(parameters[j])
+								if(parameters[j] instanceof Symbol) l.push(parameters[j])
 								else s.push(['.declare', parameters[j]]);
 							}
 							if(l.length > 1) s.push(l);

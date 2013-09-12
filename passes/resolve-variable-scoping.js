@@ -36,7 +36,10 @@ exports.Pass = function(config) {
 					subScope.declare(node[1][j], true, true)
 				}
 				extractDeclarations(node[2], subScope);
-				node.scope = subScope;
+				Object.defineProperty(node, 'scope', {
+					value: subScope, 
+					enumerable: false
+				});
 				return node;
 			} else if(node[0] === '.declare' && typeof node[1] === 'string') {
 				var s = scope;
@@ -109,7 +112,7 @@ exports.Pass = function(config) {
 			} else {
 				var s = scope;
 				while(s.parent && s.isGenerated) s = s.parent;
-				s.declarations.put(name, new Declaration(name, false, false));
+				s.declare(name, false, false)
 				usage.link = scope.declarations.get(name)
 			}
 		});
@@ -120,9 +123,7 @@ exports.Pass = function(config) {
 	/// Pass rvs-4: Renaming variables
 	var cScopes = 0;
 	var renameVariable = function(scope){
-		scope.declarations.forEach(function(name, declaration) {
-			declaration.name = 's' + cScopes + '_' + declaration.name;
-		});
+		scope.id = cScopes;
 		cScopes += 1;
 		for(var j = 0; j < scope.children.length; j++) {
 			renameVariable(scope.children[j])
@@ -137,18 +138,21 @@ exports.Pass = function(config) {
 				var subScope = node.scope;
 				var locals = [];
 				subScope.declarations.forEach(function(name, declaration) {
-					if(!declaration.isParameter) locals.push(declaration.name)
+					if(!declaration.isParameter) {
+						var localSymbol = new Symbol(subScope, name);
+						localSymbol.resolveTo(declaration);
+						locals.push(localSymbol)
+					}
 				});
 				writeBack(node[2]);
 				if(locals.length) {
 					node[2] = ['.seq', ['.local'].concat(locals), node[2]]
 				}
 				for(var j = 1; j < node[1].length; j++) if(node[1][j] instanceof Symbol) {
-					node[1][j] = node[1][j].writeBack();
+					node[1][j].resolve();
 				};
 				node.scope.locals = locals;
-				delete node.scope.uses;
-				delete node.scope.declarations;
+				delete subScope.uses;
 				return node;
 			} else {
 				recurse(node, writeBack)
@@ -158,7 +162,8 @@ exports.Pass = function(config) {
 			recurse(node, writeBack)
 			return node;
 		} else if(node instanceof Symbol) {
-			return node.writeBack()
+			node.resolve();
+			return node;
 		} else {
 			return node;
 		}

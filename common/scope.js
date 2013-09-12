@@ -3,13 +3,29 @@ var Symbol = function(scope, name){
 	this.scope = scope;
 	this.name = name;
 }
-Symbol.prototype.writeBack = function(){
-	return this.scope.uses.get(this.name).link.name
+Symbol.prototype.resolveTo = function(link) {
+	Object.defineProperty(this, 'link', {
+		value: link,
+		enumerable: false
+	});
+	delete this.scope
 }
-var Declaration = function(name, isParameter, isConstant){
+Symbol.prototype.resolve = function() {
+	this.resolveTo(this.scope.uses.get(this.name).link);
+}
+Symbol.prototype.writeBack = function(){
+	return 's' + this.link.inScope.id + '_' + this.link
+}
+var Declaration = function(name, isParameter, isConstant, xv){
 	this.name = name;
 	this.isParameter = isParameter;
 	this.isConstant = isConstant;
+	if(xv) {
+		this.externalBind = xv
+	}
+}
+Declaration.prototype.toString = function(){
+	return this.name;
 }
 var Scope = function(parent, isGenerated){
 	if(parent){
@@ -28,8 +44,10 @@ Scope.prototype.useVariable = function(name, nodeAround) {
 	this.uses.put(name, {link: null, loc: nodeAround})
 	return new Symbol(this, name)
 }
-Scope.prototype.declare = function(name, isParameter, isConstant) {
-	this.declarations.put(name, new Declaration(name, isParameter, isConstant))
+Scope.prototype.declare = function(name, isParameter, isConstant, xv) {
+	var decl = new Declaration(name, isParameter, isConstant, xv)
+	decl.inScope = this;
+	this.declarations.put(name, decl)
 }
 
 exports.Symbol = Symbol;

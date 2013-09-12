@@ -1,4 +1,5 @@
 var Hash = require('./hash').Hash
+var Symbol = require('./scope').Symbol
 
 var nodeIsOperation = function(node){
 	return (node && node instanceof Array && (typeof node[0] === 'string') && (/^[\.=\-+_~`!@#$%^&*:;"',<>\/?]/.test(node[0])))
@@ -18,11 +19,14 @@ exports.nodeIsOperation = nodeIsOperation
 exports.nodeIsStatemental = function(node){
 	return nodeIsOperation(node) && STATEMENT_LEVEL.get(node[0])
 }
-exports.nodeIsVariable = function(node){
-	return node && (typeof node === 'string')
+var nodeIsVariable = exports.nodeIsVariable = function(node){
+	return node && ((typeof node === 'string') || node instanceof Symbol)
 }
-exports.nodeIsLiteral = function(node){
+var nodeIsLiteral = exports.nodeIsLiteral = function(node){
 	return nodeIsOperation(node) && (node[0] === '.lit' || node[0] === '.fn')
+}
+var nodeIsName = exports.nodeIsName = function(node){
+	return nodeIsVariable(node) || nodeIsOperation(node) && node[0] === '.t'
 }
 exports.STATEMENT_LEVEL = STATEMENT_LEVEL
 
