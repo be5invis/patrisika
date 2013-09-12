@@ -1,4 +1,4 @@
-/// Pass Expand Assignments
+/// Pass Rules Assignments
 /// abbr. xa
 /// In this pass, assignments will be simplified into 3 forms below
 /// [= id val]

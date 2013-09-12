@@ -31,7 +31,7 @@ exports.Pass = function(config) {
 		if(!node) return node;
 		if(nodeIsOperation(node)) {
 			if(node[0] === '.fn') {
-				var subScope = new Scope(scope, !!node[3]);
+				var subScope = new Scope(scope, !!node.isGenerated);
 				for(var j = 1; j < node[1].length; j++) if(typeof node[1][j] === 'string') {
 					subScope.declare(node[1][j], true, true)
 				}
@@ -146,7 +146,9 @@ exports.Pass = function(config) {
 				});
 				writeBack(node[2]);
 				if(locals.length) {
-					node[2] = ['.seq', ['.local'].concat(locals), node[2]]
+					node[3] = ['.local'].concat(locals), node[2]
+				} else {
+					node[3] = null;
 				}
 				for(var j = 1; j < node[1].length; j++) if(node[1][j] instanceof Symbol) {
 					node[1][j].resolve();

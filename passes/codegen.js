@@ -236,7 +236,14 @@ exports.Pass = function(config) {
 			body: aStatement(body)
 		}
 	}
-	nodeTransformFunctions['.fn'] = function(parameters, body) {
+	nodeTransformFunctions['.fn'] = function(parameters, body, locals) {
+		if(locals) {
+			if(body instanceof Array && body[0] === '.seq') { 
+				body = ['.seq', locals].concat(body.slice(1))
+			} else {
+				body = ['.seq', locals, body]
+			}
+		};
 		return {
 			type: 'FunctionExpression',
 			params: parameters.slice(1).map(transform),

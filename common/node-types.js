@@ -26,7 +26,10 @@ var nodeIsLiteral = exports.nodeIsLiteral = function(node){
 	return nodeIsOperation(node) && (node[0] === '.lit' || node[0] === '.fn')
 }
 var nodeIsName = exports.nodeIsName = function(node){
-	return nodeIsVariable(node) || nodeIsOperation(node) && node[0] === '.t'
+	return nodeIsVariable(node) || nodeIsOperation(node) && (node[0] === '.t' || node[0] === '.x')
+}
+var nodeIsLeaf = exports.nodeIsLeaf = function(node){
+	return nodeIsName(node) || nodeIsOperation(node) && (node[0] === '.lit' || node[0] === '.this' || node[0] === '.unit')
 }
 exports.STATEMENT_LEVEL = STATEMENT_LEVEL
 

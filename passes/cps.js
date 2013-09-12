@@ -89,16 +89,23 @@ exports.Pass = function(config) {
 		}
 	}
 	var Continuation = function(t, body) {
-		return ['.fn', ['.list', t], body, true]
+		var node = ['.fn', ['.list', t], body]
+		node.isGenerated = true;
+		node.isContinuation = true;
+		return node;
 	}
 	var ContinuationResend = function(c) {
 		var t = mt();
-		return ['.fn', ['.list', t], ['.return', [c, t]], true]
+		var node = ['.fn', ['.list', t], ['.return', [c, t]]]
+		node.isGenerated = true;
+		node.isContinuation = true;
+		return node;
 	}
 	var generateCPSForFn = function(fn) {
 		var cpsBind = function(node, continuation) {
 //			return [continuation, node];
-			if(continuation[0] === '.fn' && continuation[1] && continuation[1].length === 2 && continuation[1][0] === '.list') {
+			if(continuation[0] === '.fn' && 
+				continuation[1] && continuation[1].length === 2 && continuation[1][0] === '.list') {
 				return ['.seq', ['.declare', continuation[1][1]], ['=', continuation[1][1], node], continuation[2]]
 			} else {
 				return [continuation, node]

@@ -1,4 +1,6 @@
 var recurse = require('./node-types.js').recurse;
+var nodeIsOperation = require('./node-types.js').nodeIsOperation;
+var nodeIsLeaf = require('./node-types.js').nodeIsLeaf;
 
 var composite = function(passes, config){
 	var steps = [];
@@ -13,7 +15,42 @@ var composite = function(passes, config){
 	}
 }
 exports.composite = composite;
-
+var NodeMatchingFunctions = {
+	'*' : function(){return true},
+	'**' : function(node){return node instanceof Array && !nodeIsLeaf(node)},
+	'#call' : function(node){return node instanceof Array && !nodeIsOperation(node)},
+	'#op' : function(node){return nodeIsOperation(node)},
+}
+var _PassFn = function(f) {
+	f.For = function(type, g) {
+		var fn = this;
+		if(NodeMatchingFunctions[type]) {
+			var mf = NodeMatchingFunctions[type];
+			return _PassFn(function(node){
+				if(mf(node)) 
+					return g.apply(this, arguments) || node
+				else 
+					return fn.apply(this, arguments) || node
+			})
+		} else {
+			return _PassFn(function(node){
+				if(nodeIsOperation(node) && node[0] === type) 
+					return g.apply(this, arguments) || node
+				else 
+					return fn.apply(this, arguments) || node
+			})
+		}
+	};
+	return f;
+}
+var Rules = function() {
+	var fn = _PassFn(function(node){return node})
+	for(var j = 0; j < arguments.length; j++) {
+		var type = arguments[j][0], g = arguments[j][1];
+		fn = fn.For(type, g)
+	}
+	return fn
+}
 var APassFor = function(_handlers){
 	var types = []
 	var handlers = []
@@ -47,3 +84,4 @@ var APassFor = function(_handlers){
 	}
 }
 exports.APassFor = APassFor;
+exports.Rules = Rules;
