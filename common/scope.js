@@ -29,13 +29,20 @@ Declaration.prototype.toString = function(){
 }
 var Scope = function(parent, isGenerated){
 	if(parent){
-		this.declarations = Object.create(parent.declarations)
+		if(parent.declarations) {
+			this.declarations = Object.create(parent.declarations)
+		} else {
+			this.declarations = new Hash();
+		}
 		parent.children.push(this);
-		this.parent = parent;
+		Object.defineProperty(this, 'parent', {
+			value: parent, 
+			enumerable: false
+		})
 	} else {
 		this.declarations = new Hash();
 	}
-	this.isGenerated = isGenerated;
+	this.isGenerated = !!isGenerated;
 	this.children = []
 	this.uses = new Hash();
 }

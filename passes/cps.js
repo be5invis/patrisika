@@ -18,6 +18,12 @@ exports.Pass = function(config) {
 	var mt = require('../common/tempname').TMaker('cp');
 	var mts = require('../common/tempname').TMaker('scm');
 	var mtf = require('../common/tempname').TMaker('cpf');
+
+	var FnGenerated = function(node) {
+		node.isGenerated = true;
+		return node;
+	}
+
 	var generateFnCPSNeed = function(node, fn) {
 		if(!node) return node;
 		if(nodeIsOperation(node)) {
@@ -104,7 +110,7 @@ exports.Pass = function(config) {
 	var generateCPSForFn = function(fn) {
 		var cpsBind = function(node, continuation) {
 //			return [continuation, node];
-			if(continuation[0] === '.fn' && 
+			if(continuation[0] === '.fn' && continuation.isContinuation &&
 				continuation[1] && continuation[1].length === 2 && continuation[1][0] === '.list') {
 				return ['.seq', ['.declare', continuation[1][1]], ['=', continuation[1][1], node], continuation[2]]
 			} else {
@@ -145,6 +151,7 @@ exports.Pass = function(config) {
 				switch(node[0]) {
 					case '.lit' :
 					case '.t' :
+					case '.x' :
 					case '.this' :
 					case '.declare' :
 					case '.unit' : {
@@ -168,15 +175,12 @@ exports.Pass = function(config) {
 						var elsePart = node[3] || ['.unit'];
 						var fCont = mtf();
 						var tCond = mt();
-						return [['.fn', ['.list', fCont], 
-							cps(condition, ['.fn', ['.list', tCond],
+						return [FnGenerated(['.fn', ['.list', 'fCont'],
+							cps(condition, Continuation(tCond, 
 								['.if', tCond, 
 									['.return', cps(thenPart, fCont)],
-									['.return', cps(elsePart, fCont)]],
-								true
-							]),
-							true
-						], continuation]
+									['.return', cps(elsePart, fCont)]]))
+						]), continuation]
 					}
 					case '&&' : {
 						var left = node[1];
@@ -184,15 +188,12 @@ exports.Pass = function(config) {
 						var tl = mt();
 						var tr = mt();
 						var fCont = mtf();
-						return ['.seq', 
-							[['.fn', ['.list', fCont], cps(left, ['.fn', ['.list', tl], 
-								['.if', tl, 
-									cps(right, ['.fn', ['.list', tr], [fCont, ['&&', tl, tr]], true]), 
-									[fCont, tl]
-								],
-								true
-							]), true], continuation]
-						]
+						return [FnGenerated(['.fn', ['.list', fCont], 
+							cps(left, Continuation(tl, ['.if', tl, 
+								cps(right, Continuation(tr, cpsBind(['&&', tl, tr], fCont))),
+								cpsBind(fCont, tl)
+							]))
+						]), continuation]
 					}
 					case '||' : {
 						var left = node[1];
@@ -200,15 +201,12 @@ exports.Pass = function(config) {
 						var tl = mt();
 						var tr = mt();
 						var fCont = mtf();
-						return ['.seq', 
-							[['.fn', ['.list', fCont], cps(left, ['.fn', ['.list', tl], 
-								['.if', tl, 
-									[fCont, tl],
-									cps(right, ['.fn', ['.list', tr], [fCont, ['||', tl, tr]], true])
-								],
-								true
-							]), true], continuation]
-						]
+						return [FnGenerated(['.fn', ['.list', fCont], 
+							cps(left, Continuation(tl, ['.if', tl, 
+								cpsBind(fCont, tl),
+								cps(right, Continuation(tr, cpsBind(['||', tl, tr], fCont)))
+							]))
+						]), continuation]
 					}
 					case '.try' : {
 						// .try nodes are transformed into schema method call passing 2 arguments: fTry and fCatch
@@ -217,17 +215,12 @@ exports.Pass = function(config) {
 						var tException = node[2];
 						var exceptionPart = node[3];
 						var fCont = mtf();
-						return ['.seq', 
-							[['.fn', ['.list', fCont], 
-								[['.', tSchema, ['.lit', 'try']],  
-									['.fn', ['.list', tSchema], 
-										cps(normalPart, fCont), true], 
-									['.fn', ['.list', tSchema, tException], 
-										cps(exceptionPart, fCont), true]
-								],
-								true
-							], continuation],
-						]
+						return [FnGenerated(['.fn', ['.list', fCont], 
+							[['.', tSchema, ['.lit', 'try']],  
+								FnGenerated(['.fn', ['.list', tSchema], cps(normalPart, fCont)]), 
+								FnGenerated(['.fn', ['.list', tSchema, tException], cps(exceptionPart, fCont)])
+							]
+						]), continuation]
 					}
 					case '.while' : {
 						// A .while Node is transformed into a recursive function IIFE.
@@ -239,15 +232,14 @@ exports.Pass = function(config) {
 						var tB = mt();
 						return ['.seq', 
 							['.declare', fLoop],
-							[['=', fLoop, ['.fn', ['.list', fCont], 
-								cps(condition, ['.fn', ['.list', tCond],
+							[['=', fLoop, FnGenerated(['.fn', ['.list', fCont], 
+								cps(condition, Continuation(tCond,
 									['.if', tCond, 
-										cps(body, ['.fn', ['.list', tB], ['.return', [fLoop, fCont]], true]),
-										['.return', [fCont]]],
-									true
-								]),
-								true
-							]], continuation],
+										cps(body, Continuation(tB, ['.return', [fLoop, fCont]])),
+										['.return', [fCont]]
+									]
+								))
+							])], continuation],
 						]
 					}
 					case '.label' : {
@@ -256,9 +248,9 @@ exports.Pass = function(config) {
 						var tBody = mt();
 						var fStmt = mtf();
 						var fLabel = (typeof label === 'string' ? ['.t', 'cpl' + label] : label)
-						return [['.fn', ['.list', fLabel], 
-							cps(body, Continuation(tBody, ['.return', [fLabel, tBody]])), true
-						], continuation]
+						return [FnGenerated(['.fn', ['.list', fLabel], 
+							cps(body, Continuation(tBody, ['.return', [fLabel, tBody]]))
+						]), continuation]
 					}
 					case '.break' : {
 						return ['.return', [(typeof node[1] === 'string' ? ['.t', 'cpl' + node[1]] : node[1])]]

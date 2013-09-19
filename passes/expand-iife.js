@@ -44,7 +44,7 @@ exports.Pass = function(config) {
 				if(fn.scope 
 					&& (config.enableIIFEExpandExecuteOnce && ex1 
 						|| !fn.scope.children.length 
-						|| (!fn.scope.locals.length && fn[1].length === 1 && node.length === 1))) {
+						|| ((!fn[3] || !fn[3].length) && fn[1].length === 1 && node.length === 1))) {
 					///IIFE expansion
 					var t = mt();   // T for return value
 					var l = ml();   // T for label

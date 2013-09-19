@@ -11,6 +11,7 @@ var cb = require('./passes/check-break');
 var ceqc = require('./passes/convert-eqc');
 var xol = require('./passes/expand-object-literal');
 var cps = require('./passes/cps');
+var flex = require('./passes/flex-scopes');
 var xi = require('./passes/expand-iife');
 var rn = require('./passes/regular-nest');
 var ds = require('./passes/denest-seq');
@@ -44,7 +45,7 @@ var USE_STRICT_NODE = {
 };
 exports.transform = function(ast, config) {
 	var config = config || DefaultConfig();
-	var flowGeneratingPTAst = passOrd.composite([xa, xtc, xfl, xol, xti, cps, rvs, ceqc, cb, xi, rn, rts, ds], config);
+	var flowGeneratingPTAst = passOrd.composite([xa, xtc, xfl, xol, xti, cb, rvs, ceqc, cps, flex, xi, rn, rts, ds], config);
 	var flowTransformation = passOrd.composite([codegen], config);
 	var ptAst = [flowGeneratingPTAst(['.fn', ['.list'], ast])];
 	var smAst = flowTransformation(ptAst);

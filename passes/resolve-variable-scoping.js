@@ -153,8 +153,8 @@ exports.Pass = function(config) {
 				for(var j = 1; j < node[1].length; j++) if(node[1][j] instanceof Symbol) {
 					node[1][j].resolve();
 				};
-				node.scope.locals = locals;
 				delete subScope.uses;
+//				delete subScope.declarations;
 				return node;
 			} else {
 				recurse(node, writeBack)
@@ -171,7 +171,7 @@ exports.Pass = function(config) {
 		}
 	}
 	return function(node){
-		var global = config.globalScope || new Scope;
+		var global = config.globalScope;
 		var r = extractExterns(node, global);
 		r = extractDeclarations(r, global)
 		r = checkUsages(r, global)
