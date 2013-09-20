@@ -23,6 +23,12 @@ var DefaultGlobalScope = function() {
 	var s = new Scope();
 	s.declare('Object', false, false, ['.x', 'Object']);
 	s.declare('Function', false, false, ['.x', 'Function']);
+	s.declare('String', false, false, ['.x', 'String']);
+	s.declare('Number', false, false, ['.x', 'Number']);
+	s.declare('Boolean', false, false, ['.x', 'Boolean']);
+	s.declare('Date', false, false, ['.x', 'Date']);
+	s.declare('RegExp', false, false, ['.x', 'RegExp']);
+	s.declare('Error', false, false, ['.x', 'Error']);
 	s.declare('undefined', false, false, ['.unit']);
 	return s;
 }

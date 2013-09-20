@@ -12,7 +12,6 @@ var Hash = require('../common/hash').Hash
 exports.Pass = function(config) {
 	var mt = require('../common/tempname').TMaker('xti');
 	var expandThis = Rules(
-		['**', function(node, scope){ recurse(node, expandThis, scope) }],
 		['.fn', function(node){ 
 			node.tThis = mt();
 			expandThis(node[2], node);

@@ -20,12 +20,21 @@ var NodeMatchingFunctions = {
 	'**' : function(node){return node instanceof Array && !nodeIsLeaf(node)},
 	'#call' : function(node){return node instanceof Array && !nodeIsOperation(node)},
 	'#op' : function(node){return nodeIsOperation(node)},
+	'#leaf' : function(node){return nodeIsLeaf(node)}
 }
 var _PassFn = function(f) {
 	f.For = function(type, g) {
 		var fn = this;
 		if(NodeMatchingFunctions[type]) {
 			var mf = NodeMatchingFunctions[type];
+			return _PassFn(function(node){
+				if(mf(node)) 
+					return g.apply(this, arguments) || node
+				else 
+					return fn.apply(this, arguments) || node
+			})
+		} else if(type instanceof Function) {
+			var mf = type;
 			return _PassFn(function(node){
 				if(mf(node)) 
 					return g.apply(this, arguments) || node
@@ -43,7 +52,7 @@ var _PassFn = function(f) {
 	};
 	return f;
 }
-var Rules = function() {
+var Rules_ = function() {
 	var fn = _PassFn(function(node){return node})
 	for(var j = 0; j < arguments.length; j++) {
 		var type = arguments[j][0], g = arguments[j][1];
@@ -51,37 +60,21 @@ var Rules = function() {
 	}
 	return fn
 }
-var APassFor = function(_handlers){
-	var types = []
-	var handlers = []
-	for(var type in _handlers) if(_handlers[type] instanceof Function) {
-		types.push(type);
-		handlers.push(_handlers[type]);
+var Rules = function() {
+	var fn = _PassFn(function(node){return node})
+			.For('**', function(node, aux){ recurse(node, fn, aux) })
+	for(var j = 0; j < arguments.length; j++) {
+		var type = arguments[j][0], g = arguments[j][1];
+		fn = fn.For(type, g)
 	}
+	return fn
+}
+var APassFor = function(){
+	var handlers = arguments;
 	return function(config) {
-		var f = function(node){
-			if(!(node instanceof Array)) return node;
-			recurse(node, f);
-			for(var k = 0; k < types.length; k++) {
-				if(node[0] === types[k]) {
-					try {
-						return handlers[k](node)
-					} catch(situation) {
-						if(situation instanceof Array){
-							throw config.createError(situation[0], situation[1] || node)
-						} else if(typeof situation === 'string') {
-							throw config.createError(situation, node)
-						} else {
-							throw situation
-						}
-					}					
-				}
-			}
-			return node;
-		}
-
-		return f;
+		return Rules.apply(null, handlers);
 	}
 }
 exports.APassFor = APassFor;
+exports.Rules_ = Rules_;
 exports.Rules = Rules;

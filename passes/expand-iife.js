@@ -13,7 +13,6 @@ exports.Pass = function(config) {
 	var ml = require('../common/tempname').TMaker('xil');
 
 	var transformIIFEBody = Rules(
-		['**', function(node, aux){ recurse(node, transformIIFEBody, aux) }],
 		['.fn', function(node){ return node }],
 		['.return', function(node, aux){ 
 			aux.hasReturn = true; 
@@ -26,7 +25,6 @@ exports.Pass = function(config) {
 	)
 
 	var expandIIFE = Rules(
-		['**', function(node, ex1){ recurse(node, expandIIFE, ex1) }],
 		['#call', function(node, ex1){ 
 			recurse(node, expandIIFE, ex1);
 			if(config.enableIIFEExpand 
