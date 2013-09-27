@@ -11,7 +11,6 @@ var nodeIsOperation = require('../common/node-types').nodeIsOperation
 
 exports.Pass = function(config) {
 	var rts = Rules(
-		['**', function(node, env){ recurse(node, rts, env) }],
 		['.declare', function(node, env){ 
 			if(nodeIsOperation(node[1]) && node[1][0] === '.t') {
 				env.put(node[1][1], true);

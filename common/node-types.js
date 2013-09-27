@@ -29,7 +29,7 @@ var nodeIsName = exports.nodeIsName = function(node){
 	return nodeIsVariable(node) || nodeIsOperation(node) && (node[0] === '.t' || node[0] === '.x')
 }
 var nodeIsLeaf = exports.nodeIsLeaf = function(node){
-	return nodeIsName(node) || nodeIsOperation(node) && (node[0] === '.lit' || node[0] === '.this' || node[0] === '.unit')
+	return nodeIsName(node) || nodeIsOperation(node) && (node[0] === '.lit' || node[0] === '.this' || node[0] === '.unit' || node[0] === '.declare')
 }
 exports.STATEMENT_LEVEL = STATEMENT_LEVEL
 

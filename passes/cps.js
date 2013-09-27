@@ -7,6 +7,8 @@
 /// In this pass, we will convert functions containing '.bind' operator
 /// into a CPS transformed form.
 
+var Rules = require('../common/pass').Rules;
+var Rules_ = require('../common/pass').Rules_;
 var Hash = require('../common/hash').Hash
 var nodeIsStatemental = require('../common/node-types').nodeIsStatemental
 var nodeIsLiteral = require('../common/node-types').nodeIsLiteral
@@ -24,26 +26,15 @@ exports.Pass = function(config) {
 		return node;
 	}
 
-	var generateFnCPSNeed = function(node, fn) {
-		if(!node) return node;
-		if(nodeIsOperation(node)) {
-			if(node[0] === '.fn') {
-				// This is a generator!
-				generateFnCPSNeed(node[2], node);
-			} else if(node[0] === '.wait') {
-				recurse(node, generateFnCPSNeed, fn);
-				fn.needsCPS = true;
-			} else if(node[0] === '.doblock') {
-				recurse(node, generateFnCPSNeed, fn);
-				fn.needsCPS = fn.needsCPS || (node.needsCPS = node[1].needsCPS);
-			} else {
-				recurse(node, generateFnCPSNeed, fn);
-			}
-		} else if(node instanceof Array) {
-			recurse(node, generateFnCPSNeed, fn);
-		}
-		return node;
-	}
+	var generateFnCPSNeed = Rules(
+		['.fn', function(node, fn){ generateFnCPSNeed(node[2], node) }],
+		['.wait', function(node, fn){ recurse(node, generateFnCPSNeed, fn); fn.containsWait = true }],
+		['.doblock', function(node, fn){ 
+			recurse(node, generateFnCPSNeed, fn); 
+			fn.containsWait = fn.containsWait || (node.containsWait = node[1].containsWait)
+		}]
+	);
+
 	var generateCPSNeed = function(node) {
 		if(nodeIsOperation(node)) {
 			switch(node[0]) {
@@ -62,26 +53,26 @@ exports.Pass = function(config) {
 					for(var j = 1; j < node.length; j++) {
 						needs = generateCPSNeed(node[j][1]) || needs;
 					}
-					return node.needsCPS = needs					
+					return node.containsWait = needs					
 				}
 				case '.doblock' : {
-					return node.needsCPS
+					return node.containsWait
 				}
 				case '.break' : {
-					return node.needsCPS = true;
+					return node.containsWait = true;
 				}
 				case '.wait' : {
 					for(var j = 1; j < node.length; j++) {
 						generateCPSNeed(node[j]);
 					}
-					return node.needsCPS = true
+					return node.containsWait = true
 				}
 				default: {
 					var needs = false;
 					for(var j = 1; j < node.length; j++) {
 						needs = generateCPSNeed(node[j]) || needs;
 					}
-					return node.needsCPS = needs
+					return node.containsWait = needs
 				}
 			}
 		} else if(node instanceof Array) {
@@ -89,7 +80,7 @@ exports.Pass = function(config) {
 			for(var j = 0; j < node.length; j++) {
 				needs = generateCPSNeed(node[j]) || needs;
 			}
-			return node.needsCPS = needs
+			return node.containsWait = needs
 		} else {
 			return false;
 		}
@@ -144,148 +135,140 @@ exports.Pass = function(config) {
 			}
 			return c;
 		}
+
+		var cps1 = Rules_(
+			['#leaf', function(node, continuation){ return cpsBind(node, continuation) }],
+			['#call', function(node, continuation){ return cpsStandard(node, continuation, 0, true) }],
+			['#op', function(node, continuation){ return cpsStandard(node, continuation, 1, false) }],
+			['=', function(node, continuation){ 
+				if(typeof node[1] === 'string' || nodeIsOperation(node[1]) && node[1][0] === '.t') {
+					var t = mt();
+					return cps(node[2], Continuation(t, ['=', node[1], t]))
+				} else {
+					return cpsStandard(node, continuation, 1, true)
+				}
+			}],
+			['.wait', function(node, continuation){
+				var t = mt();
+				return cps(node[1], Continuation(t, [['.', tSchema, ['.lit', 'bind']], t, continuation]))			
+			}],
+			['.if', function(node, continuation){
+				var condition = node[1];
+				var thenPart = node[2];
+				var elsePart = node[3] || ['.unit'];
+				var fCont = mtf();
+				var tCond = mt();
+				return [FnGenerated(['.fn', ['.list', 'fCont'],
+					cps(condition, Continuation(tCond, 
+						['.if', tCond, 
+							['.return', cps(thenPart, fCont)],
+							['.return', cps(elsePart, fCont)]]))
+				]), continuation]				
+			}],
+			['&&', function(node, continuation) {
+				var left = node[1];
+				var right = node[2];
+				var tl = mt();
+				var tr = mt();
+				var fCont = mtf();
+				return [FnGenerated(['.fn', ['.list', fCont], 
+					cps(left, Continuation(tl, ['.if', tl, 
+						cps(right, Continuation(tr, cpsBind(['&&', tl, tr], fCont))),
+						cpsBind(fCont, tl)
+					]))
+				]), continuation]
+			}],
+			['||', function(node, continuation) {
+				var left = node[1];
+				var right = node[2];
+				var tl = mt();
+				var tr = mt();
+				var fCont = mtf();
+				return [FnGenerated(['.fn', ['.list', fCont], 
+					cps(left, Continuation(tl, ['.if', tl, 
+						cpsBind(fCont, tl),
+						cps(right, Continuation(tr, cpsBind(['||', tl, tr], fCont)))
+					]))
+				]), continuation]
+			}],
+			['.try', function(node, continuation) {
+				// .try nodes are transformed into schema method call passing 2 arguments: fTry and fCatch
+				// representing the try block and the catch block respectively.
+				var normalPart = node[1];
+				var tException = node[2];
+				var exceptionPart = node[3];
+				var fCont = mtf();
+				return [FnGenerated(['.fn', ['.list', fCont], 
+					[['.', tSchema, ['.lit', 'try']],  
+						FnGenerated(['.fn', ['.list', tSchema], cps(normalPart, fCont)]), 
+						FnGenerated(['.fn', ['.list', tSchema, tException], cps(exceptionPart, fCont)])
+					]
+				]), continuation]
+			}],
+			['.while', function(node, continuation) {
+				// A .while Node is transformed into a recursive function IIFE.
+				var condition = node[1];
+				var body = node[2];
+				var fCont = mtf();
+				var fLoop = mtf();
+				var tCond = mt();
+				var tB = mt();
+				return ['.seq', 
+					['.declare', fLoop],
+					[['=', fLoop, FnGenerated(['.fn', ['.list', fCont], 
+						cps(condition, Continuation(tCond,
+							['.if', tCond, 
+								cps(body, Continuation(tB, ['.return', [fLoop, fCont]])),
+								['.return', [fCont]]
+							]
+						))
+					])], continuation],
+				]
+			}],
+			['.label', function(node, continuation) {
+				var label = node[1];
+				var body = node[2]
+				var tBody = mt();
+				var fStmt = mtf();
+				var fLabel = (typeof label === 'string' ? ['.t', 'cpl' + label] : label)
+				return [FnGenerated(['.fn', ['.list', fLabel], 
+					cps(body, Continuation(tBody, ['.return', [fLabel, tBody]]))
+				]), continuation]
+			}],
+			['.break', function(node, continuation) {
+				return ['.return', [(typeof node[1] === 'string' ? ['.t', 'cpl' + node[1]] : node[1])]]
+			}],
+			['.doblock', function(node, continuation) {
+				return [['.', tSchema, ['.lit', 'doblock']], cpstfm(node[1]), continuation]
+			}],
+			['.return', function(node, continuation) {
+				var t = mt();
+				return cps(node[1], Continuation(t, ['.return', [['.', tSchema, ['.lit', 'return']], t]]))
+			}],
+			['.obj', function(node, continuation) {
+				return cpsObject(node, continuation)
+			}],
+			['.seq', function(node, continuation) {
+				if(node.length <= 1) {
+					return cps(['.unit'], continuation)
+				} else if(node.length <= 2) {
+					return cps(node[1], continuation)
+				} else {
+					return cpsStandard(node, continuation, 1, false)
+				}
+			}]
+		);
 		// cps(node, continuation) means that "bring the result of evaluating <node> to <continuation>"
 		// continuation is a function node which takes one argument.
 		var cps = function(node, continuation) {
-			if(nodeIsOperation(node) && node.needsCPS) {
-				switch(node[0]) {
-					case '.lit' :
-					case '.t' :
-					case '.x' :
-					case '.this' :
-					case '.declare' :
-					case '.unit' : {
-						return cpsBind(node, continuation)
-					}
-					case '=' : {
-						if(typeof node[1] === 'string' || nodeIsOperation(node[1]) && node[1][0] === '.t') {
-							var t = mt();
-							return cps(node[2], Continuation(t, ['=', node[1], t]))
-						} else {
-							return cpsStandard(node, continuation, 1, true)
-						}
-					}
-					case '.wait' : {
-						var t = mt();
-						return cps(node[1], Continuation(t, [['.', tSchema, ['.lit', 'bind']], t, continuation]))
-					}
-					case '.if' : {
-						var condition = node[1];
-						var thenPart = node[2];
-						var elsePart = node[3] || ['.unit'];
-						var fCont = mtf();
-						var tCond = mt();
-						return [FnGenerated(['.fn', ['.list', 'fCont'],
-							cps(condition, Continuation(tCond, 
-								['.if', tCond, 
-									['.return', cps(thenPart, fCont)],
-									['.return', cps(elsePart, fCont)]]))
-						]), continuation]
-					}
-					case '&&' : {
-						var left = node[1];
-						var right = node[2];
-						var tl = mt();
-						var tr = mt();
-						var fCont = mtf();
-						return [FnGenerated(['.fn', ['.list', fCont], 
-							cps(left, Continuation(tl, ['.if', tl, 
-								cps(right, Continuation(tr, cpsBind(['&&', tl, tr], fCont))),
-								cpsBind(fCont, tl)
-							]))
-						]), continuation]
-					}
-					case '||' : {
-						var left = node[1];
-						var right = node[2];
-						var tl = mt();
-						var tr = mt();
-						var fCont = mtf();
-						return [FnGenerated(['.fn', ['.list', fCont], 
-							cps(left, Continuation(tl, ['.if', tl, 
-								cpsBind(fCont, tl),
-								cps(right, Continuation(tr, cpsBind(['||', tl, tr], fCont)))
-							]))
-						]), continuation]
-					}
-					case '.try' : {
-						// .try nodes are transformed into schema method call passing 2 arguments: fTry and fCatch
-						// representing the try block and the catch block respectively.
-						var normalPart = node[1];
-						var tException = node[2];
-						var exceptionPart = node[3];
-						var fCont = mtf();
-						return [FnGenerated(['.fn', ['.list', fCont], 
-							[['.', tSchema, ['.lit', 'try']],  
-								FnGenerated(['.fn', ['.list', tSchema], cps(normalPart, fCont)]), 
-								FnGenerated(['.fn', ['.list', tSchema, tException], cps(exceptionPart, fCont)])
-							]
-						]), continuation]
-					}
-					case '.while' : {
-						// A .while Node is transformed into a recursive function IIFE.
-						var condition = node[1];
-						var body = node[2];
-						var fCont = mtf();
-						var fLoop = mtf();
-						var tCond = mt();
-						var tB = mt();
-						return ['.seq', 
-							['.declare', fLoop],
-							[['=', fLoop, FnGenerated(['.fn', ['.list', fCont], 
-								cps(condition, Continuation(tCond,
-									['.if', tCond, 
-										cps(body, Continuation(tB, ['.return', [fLoop, fCont]])),
-										['.return', [fCont]]
-									]
-								))
-							])], continuation],
-						]
-					}
-					case '.label' : {
-						var label = node[1];
-						var body = node[2]
-						var tBody = mt();
-						var fStmt = mtf();
-						var fLabel = (typeof label === 'string' ? ['.t', 'cpl' + label] : label)
-						return [FnGenerated(['.fn', ['.list', fLabel], 
-							cps(body, Continuation(tBody, ['.return', [fLabel, tBody]]))
-						]), continuation]
-					}
-					case '.break' : {
-						return ['.return', [(typeof node[1] === 'string' ? ['.t', 'cpl' + node[1]] : node[1])]]
-					}
-					case '.doblock' : {
-						return [['.', tSchema, ['.lit', 'doblock']], cpstfm(node[1]), continuation]
-					}
-					case '.return' : {
-						var t = mt();
-						return cps(node[1], Continuation(t, ['.return', [['.', tSchema, ['.lit', 'return']], t]]))
-					}
-					case '.obj' : {
-						return cpsObject(node, continuation)
-					}
-					case '.seq' : {
-						if(node.length <= 1) {
-							return cps(['.unit'], continuation)
-						} else if(node.length <= 2) {
-							return cps(node[1], continuation)
-						} else {
-							return cpsStandard(node, continuation, 1, false)
-						}
-					}
-					default : {
-						return cpsStandard(node, continuation, 1, false)
-					}
-				}
+			if(node && node.containsWait){
+				return cps1(node, continuation)
 			} else if(nodeIsOperation(node)) {
 				if(node[0] === '.local') {
 					return ['.seq', node, continuation[2]]
 				} else {
 					return cpsBind(cpstfm(node), continuation)
 				}
-			} else if(node instanceof Array && node.needsCPS) {
-				return cpsStandard(node, continuation, 0, true)
 			} else {
 				return cpsBind(cpstfm(node), continuation)
 			}
@@ -298,7 +281,7 @@ exports.Pass = function(config) {
 	var cpstfm = function(node) {
 		if(!node) return node;
 		if(nodeIsOperation(node)) {
-			if(node[0] === '.fn' && node.needsCPS) {
+			if(node[0] === '.fn' && node.containsWait) {
 				// This is a generator!
 				generateCPSNeed(node[2]);
 				return generateCPSForFn(node);
