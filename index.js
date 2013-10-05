@@ -37,7 +37,7 @@ var DefaultConfig = function(gs){
 	var config = {}
 	config.globalScope = gs || DefaultGlobalScope();
 	config.createError = Warning(null);
-	config.enableIIFEExpand = true;
+	config.enableIIFEExpand = false;
 	config.enableIIFEExpandExecuteOnce = false;
 	return config;
 }
@@ -51,7 +51,7 @@ var USE_STRICT_NODE = {
 };
 exports.transform = function(ast, config) {
 	var config = config || DefaultConfig();
-	var flowGeneratingPTAst = passOrd.composite([xa, xtc, xfl, xol, xti, cb, rvs, ceqc, cps, flex, xi, rn, rts, ds], config);
+	var flowGeneratingPTAst = passOrd.composite([xtc, xfl, xol, xti, xa, cb, rvs, ceqc, cps, flex, xi, rn, rts, ds], config);
 	var flowTransformation = passOrd.composite([codegen], config);
 	var ptAst = [flowGeneratingPTAst(['.fn', ['.list'], ast])];
 	var smAst = flowTransformation(ptAst);

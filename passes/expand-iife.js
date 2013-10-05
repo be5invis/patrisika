@@ -2,7 +2,6 @@
 
 var recurse = require('../common/node-types.js').recurse
 var nodeIsOperation = require('../common/node-types').nodeIsOperation
-var formAssignment = require('../common/patterns').formAssignment
 var util = require('util')
 var Symbol = require('../common/scope').Symbol
 var Rules = require('../common/pass').Rules;

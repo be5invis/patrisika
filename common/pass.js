@@ -8,10 +8,18 @@ var composite = function(passes, config){
 		steps[j] = passes[j].Pass(config)
 	}
 	return function(node){
-		for(var j = 0; j < steps.length; j++){
-			node = steps[j](node)
+		try {
+			for(var j = 0; j < steps.length; j++){
+				node = steps[j](node)
+			}
+			return node;
+		} catch(situation) {
+			if(situation instanceof Array){
+				throw config.createError.apply(null, situation);
+			} else {
+				throw situation
+			}
 		}
-		return node;
 	}
 }
 exports.composite = composite;
@@ -52,12 +60,28 @@ var _PassFn = function(f) {
 	};
 	return f;
 }
+var ErrorHandlingFunction = function(passfn){
+	return function(node){
+		try {
+			return passfn.apply(this, arguments)
+		} catch(situation) {
+			if(typeof situation === 'string') {
+				throw [situation, node]
+			} else if(situation instanceof Array) {
+				throw situation.concat([node])
+			} else {
+				throw situation
+			}
+		}
+	}
+}
 var Rules_ = function() {
 	var fn = _PassFn(function(node){return node})
 	for(var j = 0; j < arguments.length; j++) {
 		var type = arguments[j][0], g = arguments[j][1];
 		fn = fn.For(type, g)
-	}
+	};
+	fn = ErrorHandlingFunction(fn);
 	return fn
 }
 var Rules = function() {
@@ -67,12 +91,23 @@ var Rules = function() {
 		var type = arguments[j][0], g = arguments[j][1];
 		fn = fn.For(type, g)
 	}
+	fn = ErrorHandlingFunction(fn);
 	return fn
 }
-var APassFor = function(){
-	var handlers = arguments;
-	return function(config) {
-		return Rules.apply(null, handlers);
+var APassFor = function(){ 
+	var _args = arguments;
+	return function(config){
+		var handlers = [].slice.call(_args, 0).map(function(item){
+			var pattern = item[0]
+			var _handler = item[1]
+			var handler = function(node){
+				recurse(node, fn);
+				return _handler(node);
+			};
+			return [pattern, handler]
+		});
+		var fn = Rules.apply(null, handlers);
+		return fn;
 	}
 }
 exports.APassFor = APassFor;
