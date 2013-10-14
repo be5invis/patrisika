@@ -11,13 +11,11 @@ var nodeIsOperation = require('../common/node-types').nodeIsOperation
 
 exports.Pass = function(config) {
 	var rts = Rules(
-		['.declare', function(node, env){ 
-			if(nodeIsOperation(node[1]) && node[1][0] === '.t') {
-				env.put(node[1][1], true);
-				return ['.unit']
-			}
+		[['.declare', ['.t', '*']], function(node, env){ 
+			env.put(node[1][1], true);
+			return ['.unit']
 		}],
-		['.fn', function(node, env){
+		[['.fn', '...'], function(node, env){
 			var env_ = Object.create(env);
 			rts(node[2], env_);
 			var localTs = []

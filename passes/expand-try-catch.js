@@ -9,7 +9,7 @@ var recurse = require('../common/node-types').recurse
 var nodeIsOperation = require('../common/node-types').nodeIsOperation
 var formAssignment = require('../common/patterns').formAssignment
 
-exports.Pass = APassFor(['.try', function(node){
+exports.Pass = APassFor([['.try', '...'], function(node){
 	var t = mt();
 	node[3] = ['.seq', 
 		['.def', t, node[2]],

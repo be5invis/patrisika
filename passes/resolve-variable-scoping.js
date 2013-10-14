@@ -5,70 +5,50 @@ var nodeIsOperation = require('../common/node-types').nodeIsOperation
 var Symbol = require('../common/scope').Symbol
 var Declaration = require('../common/scope').Declaration
 var Scope = require('../common/scope').Scope
+var Rules = require('../common/pass').Rules;
 
 exports.Pass = function(config) {
 	/// Pass rvs-0: Extract external declarations from AST
-	var extractExterns = function(node, globalScope) {
-		if(!node) return node;
-		if(nodeIsOperation(node)) {
-			if(node[0] === '.extern' && typeof node[1] === 'string') {
-				globalScope.declare(node[1], 0, 0)
-				return ['.unit']
-			} else {
-				recurse(node, extractExterns, globalScope)
-				return node;
-			}
-		} else if(node instanceof Array) {
-			recurse(node, extractExterns, globalScope)
-			return node;
-		} else {
-			return node;
-		}		
-	}
+	var extractExterns = Rules(
+		[['.extern', '.id'], function(node, globalScope){
+			globalScope.declare(node[1], 0, 0)
+			return ['.unit']
+		}]
+	)
 	/// Pass rvs-1: Extract variable declarations from AST
 	/// With constructing scope objects.
-	var extractDeclarations = function(node, scope){
-		if(!node) return node;
-		if(nodeIsOperation(node)) {
-			if(node[0] === '.fn') {
-				var subScope = new Scope(scope, !!node.isGenerated);
-				for(var j = 1; j < node[1].length; j++) if(typeof node[1][j] === 'string') {
-					subScope.declare(node[1][j], true, true)
-				}
-				extractDeclarations(node[2], subScope);
-				Object.defineProperty(node, 'scope', {
-					value: subScope, 
-					enumerable: false
-				});
-				return node;
-			} else if(node[0] === '.declare' && typeof node[1] === 'string') {
-				var s = scope;
-				while(s.parent && s.isGenerated) s = s.parent;
-				if(s.declarations.has(node[1]) && s.declarations.get(node[1]).isConstant) {
-					throw config.createError("Attempt to redefine constant " + node[1], node)
-				}
-				s.declare(node[1], false, false)
-				return ['.unit']
-			} else if(node[0] === '=c' && typeof node[1] === 'string') {
-				var s = scope;
-				while(s.parent && s.isGenerated) s = s.parent;
-				if(s.declarations.has(node[1])) {
-					throw config.createError("Attempt to redefine constant " + node[1], node)
-				} else {
-					s.declare(node[1], false, true)
-				}
-				return ['=c', node[1], extractDeclarations(node[2], scope)]
-			} else {
-				recurse(node, extractDeclarations, scope)
-				return node;
+	var extractDeclarations = Rules(
+		[['.fn', '...'], function(node, scope){
+			var subScope = new Scope(scope, !!node.isGenerated);
+			for(var j = 1; j < node[1].length; j++) if(typeof node[1][j] === 'string') {
+				subScope.declare(node[1][j], true, true)
 			}
-		} else if(node instanceof Array) {
-			recurse(node, extractDeclarations, scope)
-			return node;
-		} else {
-			return node;
-		}
-	}
+			extractDeclarations(node[2], subScope);
+			Object.defineProperty(node, 'scope', {
+				value: subScope, 
+				enumerable: false
+			});			
+		}],
+		[['.declare', '.id'], function(node, scope){
+			var s = scope;
+			while(s.parent && s.isGenerated) s = s.parent;
+			if(s.declarations.has(node[1]) && s.declarations.get(node[1]).isConstant) {
+				throw config.createError("Attempt to redefine constant " + node[1], node)
+			}
+			s.declare(node[1], false, false)
+			return ['.unit']			
+		}],
+		[['=c', '.id', '.'], function(node, scope){
+			var s = scope;
+			while(s.parent && s.isGenerated) s = s.parent;
+			if(s.declarations.has(node[1])) {
+				throw config.createError("Attempt to redefine constant " + node[1], node)
+			} else {
+				s.declare(node[1], false, true)
+			}
+			return ['=c', node[1], extractDeclarations(node[2], scope)]
+		}]
+	)
 
 	/// Pass rvs-2: Check used variables
 	var checkUsages = function(node, scope, parent){
@@ -131,45 +111,39 @@ exports.Pass = function(config) {
 	}
 
 	/// Pass rvs-5: Write-back
-	var writeBack = function(node){
-		if(!node) return node;
-		if(nodeIsOperation(node)) {
-			if(node[0] === '.fn') {
-				var subScope = node.scope;
-				var locals = [];
-				subScope.declarations.forEach(function(name, declaration) {
-					if(!declaration.isParameter) {
-						var localSymbol = new Symbol(subScope, name);
-						localSymbol.resolveTo(declaration);
-						locals.push(localSymbol)
-					}
-				});
-				writeBack(node[2]);
-				if(locals.length) {
-					node[3] = ['.local'].concat(locals), node[2]
-				} else {
-					node[3] = null;
+	var writeBack = Rules(
+		[['.fn', '...'], function(node){
+			var subScope = node.scope;
+			var locals = [];
+			subScope.declarations.forEach(function(name, declaration) {
+				if(!declaration.isParameter) {
+					var localSymbol = new Symbol(subScope, name);
+					localSymbol.resolveTo(declaration);
+					locals.push(localSymbol)
 				}
-				for(var j = 1; j < node[1].length; j++) if(node[1][j] instanceof Symbol) {
-					node[1][j].resolve();
-				};
-				delete subScope.uses;
-//				delete subScope.declarations;
-				return node;
+			});
+			writeBack(node[2]);
+			if(locals.length) {
+				node[3] = ['.local'].concat(locals), node[2]
 			} else {
-				recurse(node, writeBack)
-				return node;
+				node[3] = null;
 			}
-		} else if(node instanceof Array) {
-			recurse(node, writeBack)
+			for(var j = 1; j < node[1].length; j++) if(node[1][j] instanceof Symbol) {
+				node[1][j].resolve();
+			};
+			delete subScope.uses;
+//			delete subScope.declarations;
 			return node;
-		} else if(node instanceof Symbol) {
-			node.resolve();
-			return node;
-		} else {
-			return node;
-		}
-	}
+		}],
+		['.symbol', function(node){
+			node.resolve()
+		}]
+	)
+	
+	/// Pass rvs-6: Convert [=c]s into [=]s
+	var ceqc = Rules(
+		[['=c', '.', '.'], function(node){return ['=', ceqc(node[1]), ceqc(node[2])]}]
+	)
 	return function(node){
 		var global = config.globalScope;
 		var r = extractExterns(node, global);
@@ -178,6 +152,7 @@ exports.Pass = function(config) {
 		duv(global);
 		renameVariable(global);
 		r = writeBack(r, global)
+		r = ceqc(r);
 		return r;
 	};
 }

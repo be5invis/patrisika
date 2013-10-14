@@ -27,9 +27,9 @@ exports.Pass = function(config) {
 	}
 
 	var generateFnCPSNeed = Rules(
-		['.fn', function(node, fn){ generateFnCPSNeed(node[2], node) }],
-		['.wait', function(node, fn){ recurse(node, generateFnCPSNeed, fn); fn.containsWait = true }],
-		['.doblock', function(node, fn){ 
+		[['.fn', '...'], function(node, fn){ generateFnCPSNeed(node[2], node) }],
+		[['.wait', '...'], function(node, fn){ recurse(node, generateFnCPSNeed, fn); fn.containsWait = true }],
+		[['.doblock', '...'], function(node, fn){ 
 			recurse(node, generateFnCPSNeed, fn); 
 			fn.containsWait = fn.containsWait || (node.containsWait = node[1].containsWait)
 		}]
@@ -140,7 +140,7 @@ exports.Pass = function(config) {
 			['#leaf', function(node, continuation){ return cpsBind(node, continuation) }],
 			['#call', function(node, continuation){ return cpsStandard(node, continuation, 0, true) }],
 			['#op', function(node, continuation){ return cpsStandard(node, continuation, 1, false) }],
-			['=', function(node, continuation){ 
+			[['=', '...'], function(node, continuation){ 
 				if(typeof node[1] === 'string' || nodeIsOperation(node[1]) && node[1][0] === '.t') {
 					var t = mt();
 					return cps(node[2], Continuation(t, ['=', node[1], t]))
@@ -148,11 +148,11 @@ exports.Pass = function(config) {
 					return cpsStandard(node, continuation, 1, true)
 				}
 			}],
-			['.wait', function(node, continuation){
+			[['.wait', '...'], function(node, continuation){
 				var t = mt();
 				return cps(node[1], Continuation(t, [['.', tSchema, ['.lit', 'bind']], t, continuation]))			
 			}],
-			['.if', function(node, continuation){
+			[['.if', '...'], function(node, continuation){
 				var condition = node[1];
 				var thenPart = node[2];
 				var elsePart = node[3] || ['.unit'];
@@ -165,7 +165,7 @@ exports.Pass = function(config) {
 							['.return', cps(elsePart, fCont)]]))
 				]), continuation]				
 			}],
-			['&&', function(node, continuation) {
+			[['&&', '...'], function(node, continuation) {
 				var left = node[1];
 				var right = node[2];
 				var tl = mt();
@@ -178,7 +178,7 @@ exports.Pass = function(config) {
 					]))
 				]), continuation]
 			}],
-			['||', function(node, continuation) {
+			[['||', '...'], function(node, continuation) {
 				var left = node[1];
 				var right = node[2];
 				var tl = mt();
@@ -191,7 +191,7 @@ exports.Pass = function(config) {
 					]))
 				]), continuation]
 			}],
-			['.try', function(node, continuation) {
+			[['.try', '...'], function(node, continuation) {
 				// .try nodes are transformed into schema method call passing 2 arguments: fTry and fCatch
 				// representing the try block and the catch block respectively.
 				var normalPart = node[1];
@@ -205,7 +205,7 @@ exports.Pass = function(config) {
 					]
 				]), continuation]
 			}],
-			['.while', function(node, continuation) {
+			[['.while', '...'], function(node, continuation) {
 				// A .while Node is transformed into a recursive function IIFE.
 				var condition = node[1];
 				var body = node[2];
@@ -225,7 +225,7 @@ exports.Pass = function(config) {
 					])], continuation],
 				]
 			}],
-			['.label', function(node, continuation) {
+			[['.label', '...'], function(node, continuation) {
 				var label = node[1];
 				var body = node[2]
 				var tBody = mt();
@@ -235,20 +235,20 @@ exports.Pass = function(config) {
 					cps(body, Continuation(tBody, ['.return', [fLabel, tBody]]))
 				]), continuation]
 			}],
-			['.break', function(node, continuation) {
+			[['.break', '...'], function(node, continuation) {
 				return ['.return', [(typeof node[1] === 'string' ? ['.t', 'cpl' + node[1]] : node[1])]]
 			}],
-			['.doblock', function(node, continuation) {
+			[['.doblock', '...'], function(node, continuation) {
 				return [['.', tSchema, ['.lit', 'doblock']], cpstfm(node[1]), continuation]
 			}],
-			['.return', function(node, continuation) {
+			[['.return', '...'], function(node, continuation) {
 				var t = mt();
 				return cps(node[1], Continuation(t, ['.return', [['.', tSchema, ['.lit', 'return']], t]]))
 			}],
-			['.obj', function(node, continuation) {
+			[['.obj', '...'], function(node, continuation) {
 				return cpsObject(node, continuation)
 			}],
-			['.seq', function(node, continuation) {
+			[['.seq', '...'], function(node, continuation) {
 				if(node.length <= 1) {
 					return cps(['.unit'], continuation)
 				} else if(node.length <= 2) {

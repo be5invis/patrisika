@@ -9,7 +9,7 @@ var nodeIsOperation = require('../common/node-types').nodeIsOperation
 var recurse = require('../common/node-types').recurse
 
 exports.Pass = APassFor(
-	['.fn', function(node){
+	[['.fn', '...'], function(node){
 		var parameters = node[1];
 		var body = ['.seq', node[2]];
 		if(!(parameters instanceof Array && parameters.length === 0) && (!nodeIsOperation(parameters) || parameters[0] !== '.list')) {

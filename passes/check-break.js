@@ -7,9 +7,8 @@ var Hash = require('../common/hash').Hash
 exports.Pass = function(config) {
 	var n = 0;
 	var checkBreak = Rules(
-		['**', function(node, stack){ recurse(node, checkBreak, stack) }],
-		['.fn', function(node){ checkBreak(node[2], new Hash()) }],
-		['.label', function(node, stack) {
+		[['.fn', '...'], function(node){ checkBreak(node[2], new Hash()) }],
+		[['.label', '*', '*'], function(node, stack) {
 			var stack_ = Object.create(stack);
 			n++;
 			stack_.put(node[1], ('_LABEL_' + n));
@@ -17,7 +16,7 @@ exports.Pass = function(config) {
 			checkBreak(node[2], stack_);
 			return node;			
 		}],
-		['.break', function(node, stack) {
+		[['.break', '*'], function(node, stack) {
 			if(!stack.get(node[1])) {
 				throw config.createError("Target of this break statement not found.", node)
 			} else {

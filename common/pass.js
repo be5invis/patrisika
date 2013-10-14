@@ -1,6 +1,7 @@
-var recurse = require('./node-types.js').recurse;
-var nodeIsOperation = require('./node-types.js').nodeIsOperation;
-var nodeIsLeaf = require('./node-types.js').nodeIsLeaf;
+var recurse = require('./node-types').recurse;
+var nodeIsOperation = require('./node-types').nodeIsOperation;
+var nodeIsLeaf = require('./node-types').nodeIsLeaf;
+var Symbol = require('./scope').Symbol
 
 var composite = function(passes, config){
 	var steps = [];
@@ -24,39 +25,58 @@ var composite = function(passes, config){
 }
 exports.composite = composite;
 var NodeMatchingFunctions = {
+	'.' : function(){return true},
 	'*' : function(){return true},
 	'**' : function(node){return node instanceof Array && !nodeIsLeaf(node)},
+	'.id' : function(node){return typeof node === 'string'},
+	'.symbol' : function(node){return node instanceof Symbol},
 	'#call' : function(node){return node instanceof Array && !nodeIsOperation(node)},
 	'#op' : function(node){return nodeIsOperation(node)},
 	'#leaf' : function(node){return nodeIsLeaf(node)}
 }
+var NodePattern = function(pattern){
+	if(NodeMatchingFunctions[pattern]) return NodePattern(NodeMatchingFunctions[pattern]);
+	if(pattern instanceof Function) return function(){ return pattern.apply(this, arguments) };
+	if(typeof pattern === 'string') return function(node){ return node === pattern }
+	if(pattern instanceof Array) {
+		// An complicated pattern
+		var dotsOccured = false;
+		var subPatterns = []
+		for(var j = 0; j < pattern.length; j++) {
+			if(pattern[j] === '...') {
+				dotsOccured = true;
+				break;
+			} else {
+				subPatterns[j] = NodePattern(pattern[j])
+			}
+		}
+//		console.log(pattern, j, subPatterns);
+		var nSubPatterns = j;
+		if(dotsOccured) {
+			return function(node){
+				if(!(node instanceof Array)) return false;
+				for(var j = 0; j < nSubPatterns; j++) if(!subPatterns[j](node[j])) return false;
+				return true;
+			}
+		} else {
+			return function(node){
+				if(!(node instanceof Array) || node.length !== nSubPatterns) return false;
+				for(var j = 0; j < nSubPatterns; j++) if(!subPatterns[j](node[j])) return false;
+				return true;
+			}
+		}
+	}
+}
 var _PassFn = function(f) {
 	f.For = function(type, g) {
 		var fn = this;
-		if(NodeMatchingFunctions[type]) {
-			var mf = NodeMatchingFunctions[type];
-			return _PassFn(function(node){
-				if(mf(node)) 
-					return g.apply(this, arguments) || node
-				else 
-					return fn.apply(this, arguments) || node
-			})
-		} else if(type instanceof Function) {
-			var mf = type;
-			return _PassFn(function(node){
-				if(mf(node)) 
-					return g.apply(this, arguments) || node
-				else 
-					return fn.apply(this, arguments) || node
-			})
-		} else {
-			return _PassFn(function(node){
-				if(nodeIsOperation(node) && node[0] === type) 
-					return g.apply(this, arguments) || node
-				else 
-					return fn.apply(this, arguments) || node
-			})
-		}
+		var mf = NodePattern(type);
+		return _PassFn(function(node){
+			if(mf(node)) 
+				return g.apply(this, arguments) || node
+			else 
+				return fn.apply(this, arguments) || node
+		})
 	};
 	return f;
 }
