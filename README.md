@@ -29,6 +29,12 @@ Represents a conditional evaluation.
 Represents a while loop evaluation. It always returns `undefined`.
 ### ['.seq', ...items]
 Represents a sequencial evaluation. Returns the last item evaluated.
+### ['.return', value]
+Return a value. Similar to JavaScript `return` statement.
+### ['.label', 'sLabel', body]
+Declare a labelled expression. Labels are used by `.break` nodes.
+### ['.break', 'sLabel']
+Jumps to the position after the labelled expression `'sLabel'`.
 ### [fn, ...args]
 Once `fn` is a valid node, it means a common function invocation.
 
