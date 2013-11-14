@@ -7,15 +7,14 @@ var APassFor = require('../common/pass').APassFor
 var mt = require('../common/tempname').TMaker('xfl')
 var nodeIsOperation = require('../common/node-types').nodeIsOperation
 var recurse = require('../common/node-types').recurse
-var formAssignment = require('../common/patterns').formAssignment
 
 exports.Pass = APassFor(
-	['.fn', function(node){
+	[['.fn', '...'], function(node){
 		var parameters = node[1];
 		var body = ['.seq', node[2]];
 		if(!(parameters instanceof Array && parameters.length === 0) && (!nodeIsOperation(parameters) || parameters[0] !== '.list')) {
 			/// functions with parameter involving the whole arguments
-			body = ['.seq', formAssignment(parameters, ['.args'], true, true), body]
+			body = ['.seq', ['.def', parameters, ['.args']], body]
 			parameters = ['.list']
 			return ['.fn', parameters, body]
 		} else {
@@ -40,19 +39,19 @@ exports.Pass = APassFor(
 					jFirstOptionalNode = parameters.length;
 				}
 				var tArgs = mt();
-				var sBindings = ['.seq', formAssignment(tArgs, ['.args'], true, true)];
+				var sBindings = ['.seq', ['.def', tArgs, ['.args']]];
 				for(var j = jFirstIrregularNode; j < jFirstOptionalNode; j++) {
 					var t = mt();
-					sBindings.push(formAssignment(parameters[j], t, true, true));
+					sBindings.push(['.def', parameters[j], t]);
 					parameters[j] = t;
 				};
 				for(var j = jFirstOptionalNode; j < parameters.length; j++) {
 					var t = mt();
 					sBindings.push(['.if', 
 						['<', ['.', tArgs, ['.lit', 'length']], ['.lit', j]],
-						formAssignment(t, parameters[j][2], true, true)
+						['.def', t, parameters[j][2]]
 					]);
-					sBindings.push(formAssignment(parameters[j][1], t, true, true))
+					sBindings.push(['.def', parameters[j][1], t])
 					parameters[j] = t;
 				}
 

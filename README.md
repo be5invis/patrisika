@@ -1,7 +1,36 @@
 Patrisika
 ===================================
 
-An AST library with free combination.
+An library converts orthogonal AST into SpiderMonkey AST.
+
+Semantic Definitions
+-----------------------------------
+AST for Patrisika is provided as JavaScript arraies. The following forms represents a node:
+
+### 'identifier'
+Represents a variable.
+### ['.t', 'name']
+Represents a temporary variable.
+### ['.lit', value]
+Represents a literal value.
+### ['.this']
+Represents the `this` reference.
+### ['.fn', patternParameters, nodeBody]
+Represents a function literal. Note that *patternParameters* matches the whole argument list.
+### ['.list', ...items]
+Represents an array literal.
+### ['.obj', ...['propName', propValue, ε | 'get' | 'set']]
+Represents an object literal.
+### ['.', base, member]
+Represents a membering operation, i.e. `base[member]`.
+### ['.if', condition, consequent, alternate?]
+Represents a conditional evaluation.
+### ['.while', condition, body]
+Represents a while loop evaluation. It always returns `undefined`.
+### ['.seq', ...items]
+Represents a sequencial evaluation. Returns the last item evaluated.
+### [fn, ...args]
+Once `fn` is a valid node, it means a common function invocation.
 
 Current Passes
 -----------------------------------
@@ -19,7 +48,7 @@ Current Passes
 ###Later Semantic Expansion
 - **check-break** : Check and rename `[.label]` nodes and `[.break]` nodes.
 - **expand-object-literal** : Expand complex object literal (`[.obj]`) nodes into JavaScript-style nodes, which means that there is no 'get' or 'set' kind property pair.
-- **cps** : **[TODO]** Convert sequences into nested callbacks.
+- **cps** : Convert sequences into nested callbacks.
 
 ###Optimization
 - **expand-iife** : Expand immediately-invoked function expressions into straight statements.

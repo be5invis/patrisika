@@ -12,12 +12,12 @@ var Hash = require('../common/hash').Hash
 exports.Pass = function(config) {
 	var mt = require('../common/tempname').TMaker('xti');
 	var expandThis = Rules(
-		['.fn', function(node){ 
+		[['.fn', '...'], function(node){ 
 			node.tThis = mt();
 			expandThis(node[2], node);
 			if(node.thisOccurs) node[2] = ['.seq', ['=', node.tThis, ['.this']], node[2]]
 		}],
-		['.this', function(node, scope){
+		[['.this'], function(node, scope){
 			scope.thisOccurs = true;
 			return scope.tThis
 		}]);

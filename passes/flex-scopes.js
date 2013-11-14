@@ -7,7 +7,7 @@ var Scope = require('../common/scope').Scope
 exports.Pass = function(config) {
 
 	var flex = Rules(
-		['.fn', function(node, aux){
+		[['.fn', '...'], function(node, aux){
 			if(node.scope && node.scope.parent !== aux.lastFigured) {
 				throw config.createError('##PATRISIKA -- Scope flexing failed : Topology changed.\nThis is a Patrisika bug, please contact its developers', node)
 			};
@@ -32,7 +32,7 @@ exports.Pass = function(config) {
 			return node;
 		}]);
 	var rebuildChildren = Rules(
-		['.fn', function(node, parent){
+		[['.fn', '...'], function(node, parent){
 			node.scope.children = [];
 			rebuildChildren(node[2], node.scope);
 			parent.children.push(node.scope);

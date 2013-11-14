@@ -2,7 +2,6 @@
 
 var recurse = require('../common/node-types.js').recurse
 var nodeIsOperation = require('../common/node-types').nodeIsOperation
-var formAssignment = require('../common/patterns').formAssignment
 var util = require('util')
 var Symbol = require('../common/scope').Symbol
 var Rules = require('../common/pass').Rules;
@@ -13,25 +12,21 @@ exports.Pass = function(config) {
 	var ml = require('../common/tempname').TMaker('xil');
 
 	var transformIIFEBody = Rules(
-		['.fn', function(node){ return node }],
-		['.return', function(node, aux){ 
+		[['.fn', '...'], function(node){ return node }],
+		[['.return', '...'], function(node, aux){ 
 			aux.hasReturn = true; 
 			return ['.seq', 
 				['=', aux.tid, transformIIFEBody(node[1], aux, node)],
 				['.break', aux.lid]
 			]}],
-		['.args', function(node, aux){ aux.hasArgs = true; return [['.', aux.aid, 'slice'], ['.lit', 0]] }],
-		['.this', function(){ return ['.lit', null] }]
+		[['.args', '...'], function(node, aux){ aux.hasArgs = true; return [['.', aux.aid, 'slice'], ['.lit', 0]] }],
+		[['.this', '...'], function(){ return ['.lit', null] }]
 	)
 
 	var expandIIFE = Rules(
-		['#call', function(node, ex1){ 
+		[[['.fn', ['.list', '...'], '...'], '...'], function(node, ex1){ 
 			recurse(node, expandIIFE, ex1);
-			if(config.enableIIFEExpand 
-				&& nodeIsOperation(node[0]) 
-				&& node[0][0] === '.fn' 
-				&& nodeIsOperation(node[0][1]) 
-				&& node[0][1][0] === '.list') {
+			if(config.enableIIFEExpand) {
 				var fn = node[0];
 
 				/// There are two situations which an IIFE could be expanded safely:
@@ -118,9 +113,9 @@ exports.Pass = function(config) {
 				}
 			}
 		}],
-		['.fn', function(node){ node[2] = expandIIFE(node[2], true) }],
-		['.while', function(node){ recurse(node, expandIIFE, false) }],
-		['.doblock', function(node){ return expandIIFE([node[1]], ex1) }]
+		[['.fn', '...'], function(node){ node[2] = expandIIFE(node[2], true) }],
+		[['.while', '...'], function(node){ recurse(node, expandIIFE, false) }],
+		[['.doblock', '...'], function(node){ return expandIIFE([node[1]], ex1) }]
 	)
 
 	return function(node){

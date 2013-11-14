@@ -11,7 +11,7 @@ var nodeIsVariable = require('../common/node-types').nodeIsVariable;
 
 exports.Pass = function(config) {
 	var ds = Rules(
-		['.seq', function(node) {
+		[['.seq', '...'], function(node) {
 			recurse(node, ds);
 			var a = [];
 			for(var j = 1; j < node.length; j++) {

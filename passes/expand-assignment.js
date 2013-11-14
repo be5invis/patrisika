@@ -11,13 +11,13 @@ var nodeIsOperation = require('../common/node-types').nodeIsOperation
 var formAssignment = require('../common/patterns').formAssignment
 
 exports.Pass = APassFor(
-	['=', function(node){
+	[['=', '...'], function(node){
 		return formAssignment(node[1], node[2], false, false)
 	}],
-	['.var', function(node){
+	[['.var', '...'], function(node){
 		return formAssignment(node[1], node[2], true, false)
 	}],
-	['.def', function(node){
+	[['.def', '...'], function(node){
 		return formAssignment(node[1], node[2], true, true)
 	}]
 );

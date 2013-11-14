@@ -41,7 +41,7 @@ var formAssignment = function(left, right, isDeclarative, isConstant){
 			sAssignment.push(tObj)
 			return sAssignment
 		} else {
-			throw ['Invalid Pattern', left]
+			throw ['Invalid left-value pattern', left]
 		}
 	} else {
 		/// [= [f alpha beta] val] => [= [.list alpha beta] [[. f unapply] val]]
