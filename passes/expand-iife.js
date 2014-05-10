@@ -1,4 +1,4 @@
-/// Pass Resolve Variable Scoping
+/// Pass IIFE Expansion
 
 var recurse = require('../common/node-types.js').recurse
 var nodeIsOperation = require('../common/node-types').nodeIsOperation
@@ -114,8 +114,7 @@ exports.Pass = function(config) {
 			}
 		}],
 		[['.fn', '...'], function(node){ node[2] = expandIIFE(node[2], true) }],
-		[['.while', '...'], function(node){ recurse(node, expandIIFE, false) }],
-		[['.doblock', '...'], function(node){ return expandIIFE([node[1]], ex1) }]
+		[['.while', '...'], function(node){ recurse(node, expandIIFE, false) }]
 	)
 
 	return function(node){

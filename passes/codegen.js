@@ -262,7 +262,7 @@ exports.Pass = function(config) {
 		return {
 			type: 'LabeledStatement',
 			label: transform(label),
-			body: transform(expr)
+			body: aStatement(expr)
 		}
 	}
 	nodeTransformFunctions['.break'] = function(label) {
@@ -274,11 +274,11 @@ exports.Pass = function(config) {
 	nodeTransformFunctions['.try'] = function(block, param, handler) {
 		return {
 			type: 'TryStatement',
-			block: transform(block),
+			block: aStatement(block),
 			handlers: [{
 				type: 'CatchClause',
 				param: transform(param),
-				body: transform(handler)
+				body: aStatement(handler)
 			}]
 		}
 	}

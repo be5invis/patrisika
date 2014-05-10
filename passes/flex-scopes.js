@@ -9,7 +9,7 @@ exports.Pass = function(config) {
 	var flex = Rules(
 		[['.fn', '...'], function(node, aux){
 			if(node.scope && node.scope.parent !== aux.lastFigured) {
-				throw config.createError('##PATRISIKA -- Scope flexing failed : Topology changed.\nThis is a Patrisika bug, please contact its developers', node)
+				throw config.createError('##PATRISIKA -- Scope flexing failed : Topology changed.\nThis is a Patrisika bug, please contact its developers.', node)
 			};
 			if(node.scope) {
 				node.scope.parent = aux.last;

@@ -13,7 +13,7 @@ exports.Pass = APassFor(
 		var parameters = node[1];
 		var body = ['.seq', node[2]];
 		if(!(parameters instanceof Array && parameters.length === 0) && (!nodeIsOperation(parameters) || parameters[0] !== '.list')) {
-			/// functions with parameter involving the whole arguments
+			/// functions with parameter pattern involving the whole arguments list
 			body = ['.seq', ['.def', parameters, ['.args']], body]
 			parameters = ['.list']
 			return ['.fn', parameters, body]

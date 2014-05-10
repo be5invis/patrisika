@@ -28,11 +28,7 @@ exports.Pass = function(config) {
 
 	var generateFnCPSNeed = Rules(
 		[['.fn', '...'], function(node, fn){ generateFnCPSNeed(node[2], node) }],
-		[['.wait', '...'], function(node, fn){ recurse(node, generateFnCPSNeed, fn); fn.containsWait = true }],
-		[['.doblock', '...'], function(node, fn){ 
-			recurse(node, generateFnCPSNeed, fn); 
-			fn.containsWait = fn.containsWait || (node.containsWait = node[1].containsWait)
-		}]
+		[['.wait', '...'], function(node, fn){ recurse(node, generateFnCPSNeed, fn); fn.containsWait = true }]
 	);
 
 	var generateCPSNeed = function(node) {
@@ -54,9 +50,6 @@ exports.Pass = function(config) {
 						needs = generateCPSNeed(node[j][1]) || needs;
 					}
 					return node.containsWait = needs					
-				}
-				case '.doblock' : {
-					return node.containsWait
 				}
 				case '.break' : {
 					return node.containsWait = true;
@@ -150,7 +143,9 @@ exports.Pass = function(config) {
 			}],
 			[['.wait', '...'], function(node, continuation){
 				var t = mt();
-				return cps(node[1], Continuation(t, [['.', tSchema, ['.lit', 'bind']], t, continuation]))			
+				return cps(node[1], Continuation(t, ['.seq', 
+					['=', tNext, continuation], 
+					['.return', ['.obj', ['value', t], ['done', ['.lit', false]]]]]))
 			}],
 			[['.if', '...'], function(node, continuation){
 				var condition = node[1];
@@ -163,7 +158,7 @@ exports.Pass = function(config) {
 						['.if', tCond, 
 							['.return', cps(thenPart, fCont)],
 							['.return', cps(elsePart, fCont)]]))
-				]), continuation]				
+				]), continuation]
 			}],
 			[['&&', '...'], function(node, continuation) {
 				var left = node[1];
@@ -198,10 +193,19 @@ exports.Pass = function(config) {
 				var tException = node[2];
 				var exceptionPart = node[3];
 				var fCont = mtf();
+				var bk = mtf();
 				return [FnGenerated(['.fn', ['.list', fCont], 
-					[['.', tSchema, ['.lit', 'try']],  
-						FnGenerated(['.fn', ['.list', tSchema], cps(normalPart, fCont)]), 
-						FnGenerated(['.fn', ['.list', tSchema, tException], cps(exceptionPart, fCont)])
+					['.seq',  
+						['=', bk, tCatch],
+						['=', tCatch, FnGenerated(['.fn', ['.list', tException], 
+							['.seq', 
+								['=', tCatch, bk], 
+								['=', tNext, FnGenerated(['.fn', ['.list'], cps(exceptionPart, fCont)])],
+								['.return', [['.', tgen, ['.lit', 'next']]]]
+							]
+						])],
+						['=', tNext, FnGenerated(['.fn', ['.list'], cps(normalPart, fCont)])],
+						['.return', [['.', tgen, ['.lit', 'next']]]]
 					]
 				]), continuation]
 			}],
@@ -238,12 +242,9 @@ exports.Pass = function(config) {
 			[['.break', '...'], function(node, continuation) {
 				return ['.return', [(typeof node[1] === 'string' ? ['.t', 'cpl' + node[1]] : node[1])]]
 			}],
-			[['.doblock', '...'], function(node, continuation) {
-				return [['.', tSchema, ['.lit', 'doblock']], cpstfm(node[1]), continuation]
-			}],
 			[['.return', '...'], function(node, continuation) {
 				var t = mt();
-				return cps(node[1], Continuation(t, ['.return', [['.', tSchema, ['.lit', 'return']], t]]))
+				return cps(node[1], Continuation(t, FinishSteps(t)))
 			}],
 			[['.obj', '...'], function(node, continuation) {
 				return cpsObject(node, continuation)
@@ -274,9 +275,26 @@ exports.Pass = function(config) {
 			}
 		};
 		
-		var tSchema = mts();
-		var contFinish =  Continuation(mt(), [['.', tSchema, ['.lit', 'return']]]);
-		return ['.obj', ['build', ['.fn', ['.list', tSchema], ['.return', ['.fn', fn[1], cps(fn[2], contFinish)]]]]]
+		var tgen = mt();
+		var tNext = mt();
+		var tCatch = mt();
+		var tX = mt();
+		var tE = mt();
+		var FinishSteps = function(e){
+			return ['.seq', 
+				['=', tNext, FnGenerated(['.fn', ['.list'], [['.x', 's0_throw'], ['.lit', 'Already Finished.']]])],
+				['=', tCatch, tNext],
+				['.return', ['.obj', ['done', ['.lit', true]], ['value', e]]]]
+		}
+		var contFinish = Continuation(mt(), FinishSteps(['.unit']));
+		return ['.fn', fn[1], ['.seq', 
+			['=', tNext, FnGenerated(['.fn', ['.list'], cps(fn[2], contFinish)])],
+			['=', tCatch, FnGenerated(['.fn', ['.list', tX], [['.x', 's0_throw'], tX]])],
+			['=', tgen, ['.obj', 
+				['next', FnGenerated(['.fn', ['.list', tX], ['.try', [tNext, tX], tE, ['.seq', [tCatch, tE]]]])],
+				['throw', FnGenerated(['.fn', ['.list', tX], [tCatch, tX]])]
+			]],
+			['.return', tgen]], fn[3]]
 	}
 	var cpstfm = function(node) {
 		if(!node) return node;

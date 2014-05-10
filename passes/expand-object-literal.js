@@ -58,7 +58,7 @@ exports.Pass = APassFor([['.obj', '...'], function(node){
 			}
 		}
 		hAccessorProperties.forEach(function(key, value) {
-			s.push([['.', 'Object', ['.lit', 'defineProperty']], t, ['.lit', key], ['.obj', 
+			s.push([['.', ['.g', 'Object'], ['.lit', 'defineProperty']], t, ['.lit', key], ['.obj', 
 				['get', value.get || ['.lit', null]],
 				['set', value.set || ['.lit', null]]
 			]])

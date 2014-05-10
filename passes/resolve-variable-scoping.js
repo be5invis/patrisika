@@ -67,6 +67,8 @@ exports.Pass = function(config) {
 				}
 				recurse(node, checkUsages, scope)
 				return node
+			} else if(node[0] === '.g' && typeof node[1] === 'string'){
+				return config.globalScope.useVariable(node[1], parent)
 			} else {
 				recurse(node, checkUsages, scope)
 				return node;
