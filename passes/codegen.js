@@ -51,9 +51,6 @@ exports.Pass = function(config) {
 	nodeTransformFunctions['.t'] = function(name){
 		return {type: 'Identifier', name: encodeTNames(name)}
 	}
-	nodeTransformFunctions['.x'] = function(name){
-		return {type: 'Identifier', name: name}
-	}
 	nodeTransformFunctions['.unit'] = function(name){
 		return {type: 'UnaryExpression', operator:'void', prefix: true, argument: {type: 'Literal', value: 0}}
 	}

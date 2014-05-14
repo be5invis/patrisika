@@ -50,39 +50,43 @@ exports.Pass = function(config) {
 		}]
 	)
 
-	/// Pass rvs-2: Check used variables
-	var checkUsages = function(node, scope, parent){
-		if(!node) return node;
-		if(nodeIsOperation(node)) {
-			if(node[0] === '.fn') {
-				var subScope = node.scope;
-				for(var j = 1; j < node[1].length; j++) if(typeof node[1][j] === 'string') {
-					node[1][j] = subScope.useVariable(node[1][j], node[1])
+	/// Pass rvs-2b: Check used variables
+	var checkUsages = function(rootNode, globalScope) {
+		var cu = function(node, scope, parent){
+			if(!node) return node;
+			if(nodeIsOperation(node)) {
+				if(node[0] === '.fn') {
+					var subScope = node.scope;
+					for(var j = 1; j < node[1].length; j++) if(typeof node[1][j] === 'string') {
+						node[1][j] = subScope.useVariable(node[1][j], node[1])
+					}
+					cu(node[2], subScope, node);
+					return node;
+				} else if(node[0] === '=' && typeof node[1] === 'string') {
+					if(scope.declarations.get(node[1]) && scope.declarations.get(node[1]).isConstant) {
+						throw config.createError("Attempt to assign to constant " + node[1], node)
+					}
+					recurse(node, cu, scope)
+					return node
+				} else if(node[0] === '.g' && typeof node[1] === 'string') {
+					return globalScope.useVariable(node[1], parent)
+				} else {
+					recurse(node, cu, scope)
+					return node;
 				}
-				checkUsages(node[2], subScope, node);
+			} else if(node instanceof Array) {
+				recurse(node, cu, scope)
 				return node;
-			} else if(node[0] === '=' && typeof node[1] === 'string') {
-				if(scope.declarations.get(node[1]) && scope.declarations.get(node[1]).isConstant) {
-					throw config.createError("Attempt to assign to constant " + node[1], node)
-				}
-				recurse(node, checkUsages, scope)
-				return node
-			} else if(node[0] === '.g' && typeof node[1] === 'string'){
-				return config.globalScope.useVariable(node[1], parent)
+			} else if(typeof node === 'string') {
+				///  node is variable
+				return scope.useVariable(node, parent);
 			} else {
-				recurse(node, checkUsages, scope)
 				return node;
 			}
-		} else if(node instanceof Array) {
-			recurse(node, checkUsages, scope)
-			return node;
-		} else if(typeof node === 'string') {
-			///  node is variable
-			return scope.useVariable(node, parent);
-		} else {
-			return node;
 		}
+		return cu(rootNode, globalScope)
 	}
+
 	/// Pass rvs-3: Declare undeclared variables
 	var duv = function(scope){
 		scope.uses.forEach(function(name, usage) {
