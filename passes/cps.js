@@ -187,8 +187,8 @@ exports.Pass = function(config) {
 				]), continuation]
 			}],
 			[['.try', '...'], function(node, continuation) {
-				// .try nodes are transformed into schema method call passing 2 arguments: fTry and fCatch
-				// representing the try block and the catch block respectively.
+				// .try nodes are transformed into a complex form.
+				// I hate exceptions.
 				var normalPart = node[1];
 				var tException = node[2];
 				var exceptionPart = node[3];
@@ -196,16 +196,16 @@ exports.Pass = function(config) {
 				var bk = mtf();
 				return [FnGenerated(['.fn', ['.list', fCont], 
 					['.seq',  
-						['=', bk, tCatch],
+						['=', bk, tCatch], // Backup exception handler
 						['=', tCatch, FnGenerated(['.fn', ['.list', tException], 
 							['.seq', 
-								['=', tCatch, bk], 
+								['=', tCatch, bk], // Restore exception handler
 								['=', tNext, FnGenerated(['.fn', ['.list'], cps(exceptionPart, fCont)])],
-								['.return', [['.', tgen, ['.lit', 'next']]]]
+								['.return', [['.', tGen, ['.lit', 'next']]]]
 							]
 						])],
 						['=', tNext, FnGenerated(['.fn', ['.list'], cps(normalPart, fCont)])],
-						['.return', [['.', tgen, ['.lit', 'next']]]]
+						['.return', [['.', tGen, ['.lit', 'next']]]]
 					]
 				]), continuation]
 			}],
@@ -275,7 +275,7 @@ exports.Pass = function(config) {
 			}
 		};
 		
-		var tgen = mt();
+		var tGen = mt();
 		var tNext = mt();
 		var tCatch = mt();
 		var tX = mt();
@@ -290,11 +290,11 @@ exports.Pass = function(config) {
 		return ['.fn', fn[1], ['.seq', 
 			['=', tNext, FnGenerated(['.fn', ['.list'], cps(fn[2], contFinish)])],
 			['=', tCatch, FnGenerated(['.fn', ['.list', tX], [['.x', 's0_throw'], tX]])],
-			['=', tgen, ['.obj', 
+			['=', tGen, ['.obj', 
 				['next', FnGenerated(['.fn', ['.list', tX], ['.try', [tNext, tX], tE, ['.seq', [tCatch, tE]]]])],
 				['throw', FnGenerated(['.fn', ['.list', tX], [tCatch, tX]])]
 			]],
-			['.return', tgen]], fn[3]]
+			['.return', tGen]], fn[3]]
 	}
 	var cpstfm = function(node) {
 		if(!node) return node;
