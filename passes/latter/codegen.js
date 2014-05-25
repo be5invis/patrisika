@@ -86,6 +86,11 @@ var logop = Binopoid('LogicalExpression');
 
 var te = syntax_rule(
 	[['.lambda', ',args', ',body'], function(form){
+		if(this.body instanceof Array && this.body[0] === '.begin'){
+			this.body = this.body
+		} else {
+			this.body = ['.begin', this.body]
+		}
 		return {
 			type: 'FunctionExpression',
 			params: this.args.map(te),

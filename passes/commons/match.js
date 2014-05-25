@@ -57,11 +57,14 @@ function buildPattern(pattern){
 }
 
 var syntax_rule = function(){
-	var pairs = [].slice.call(arguments, 0).map(function(p){ return [buildPattern(p[0]), p[1]] });
+	var pairs = [].slice.call(arguments, 0).map(function(p){ return p.slice(0, -1).map(buildPattern).concat(p[p.length - 1]) });
 	return function(node, __){
 		for(var j = 0; j < pairs.length; j++){
-			var w = {};
-			if(pairs[j][0](node, w)) return pairs[j][1].apply(w, arguments)
+			var pair = pairs[j];
+			for(var k = 0; k < pair.length - 1; k++){
+				var w = {};
+				if(pair[k](node, w)) return pair[pair.length - 1].apply(w, arguments)
+			}
 		}
 	}
 }
