@@ -73,12 +73,7 @@ var rs = syntax_rule(
 		// drop ctx.
 		return ['.return', x]
 	}) }],
-	[['.if', ',cond', ',consequent'], function(form, ctx){
-		var $consequent = this.consequent;
-		return re(this.cond, function(c){
-			return ctx(['.if', c, rs($consequent, id)])
-		})
-	}],
+	[['.if', ',cond', ',consequent'], function(form, ctx){ return re(form.concat([['.unit']]), ctx)}],
 	[['.if', ',cond', ',consequent', ',alternate'], function(form, ctx){
 		var $consequent = this.consequent;
 		var $alternate = this.alternate;
@@ -116,7 +111,7 @@ var re = syntax_rule(
 	[empty, function(form){ return ctx['.unit'] }],
 	[['.lambda', ',args', ',body'], function(form, ctx){ return ctx(form) }],
 	[['.quote', ',x'], function(form, ctx){ return ctx(form) }],
-	[['.unit', ',x'], function(form, ctx){ return ctx(form) }],
+	[['.unit'], function(form, ctx){ return ctx(form) }],
 	[['.plain', ',x'], function(form, ctx){ return ctx(this.x) }],
 	[['.return', ',x'], function(form, ctx){
 		return re(this.x, function(x){ return ['.return', x] })
@@ -229,26 +224,21 @@ var cps = syntax_rule(
 		})
 	}],
 	[['&', '.if', ',test', ',consequent'], function(form, env, ctx){
-		var $test = this.test, $consequent = this.consequent;
-		var t = newt();
-		var tx = newt();
-		return ['.begin', ['=', t, ['lambda', [tx], ctx(tx)]], cpsa($test, env, function(c){
-			return ['.if', c, 
-				cps($consequent, env, function(x){ return ['.return', [t, x]] }),
-				['.return', [t, ['.unit']]]
-			];
-		})];
+		return cps(form.concat([['.unit']]), env, ctx)
 	}],
 	[['&', '.if', ',test', ',consequent', ',alternate'], function(form, env, ctx){
 		var $test = this.test, $consequent = this.consequent, $alternate = this.alternate;
 		var t = newt();
 		var tx = newt();
-		return ['.begin', ['=', t, ['lambda', [tx], ctx(tx)]], cpsa($test, env, function(c){
-			return ['.if', c, 
-				cps($consequent, env, function(x){ return ['.return', [t, x]] }),
-				cps($alternate, env, function(x){ return ['.return', [t, x]] })
-			];
-		})];
+		return ['.begin', 
+			['=', t, ['lambda', [tx], ctx(tx)]], 
+			cpsa($test, env, function(c){
+				return ['.if', c, 
+					cps($consequent, env, function(x){ return ['.return', [t, x]] }),
+					cps($alternate, env, function(x){ return ['.return', [t, x]] })
+				];
+			})
+		];
 	}],
 	[['&', '.while', ',test', ',body'], function(form, env, ctx){
 		var $test = this.test, $body = this.body;
