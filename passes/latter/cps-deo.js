@@ -9,7 +9,7 @@ var _ = require('../commons/match.js')._;
 var atom = require('../commons/match.js').atom;
 var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
-var isStatement = require('../commons/nodetype.js').isStatement;
+var prim = require('../commons/match.js').prim;
 
 
 var newt = function(){
@@ -34,7 +34,10 @@ var plain = syntax_rule(
 	[['.quote', ',x'], function(form){ return ['.plain', form] }],
 	[['.t', ',x'], function(form){ return ['.plain', form] }],
 	[['&!', ',x'], function(form){ return ['&!', plain(this.x)] }],
-	[isStatement, function(form){ 
+	[['.if', ',..args'],
+	 ['.begin', ',..args'],
+	 ['.while', ',..args'],
+	 ['.return', ',..args'], function(form){ 
 		var a = [form[0]].concat(form.slice(1).map(plain));
 		for(var j = 1; j < a.length; j++){
 			if(a[j] instanceof Array && (a[j][0] === '&' || a[j][0] === '&!')) {
@@ -44,7 +47,7 @@ var plain = syntax_rule(
 		return a ;
 	}],
 	[[',..call'], function(form){
-		var j0 = (typeof form[0] === 'string' && !(/\w/.test(form[0]))) ? 1 : 0;
+		var j0 = prim(form[0]) ? 1 : 0;
 		var a = form.slice(0, j0).concat(form.slice(j0).map(plain));
 		for(var j = j0; j < a.length; j++){
 			if(a[j] instanceof Array && (a[j][0] === '&' || a[j][0] === '&!')) {
@@ -161,7 +164,7 @@ var re = syntax_rule(
 			['=', tr, ['.lambda', [trx], ra($test, env, function(c){
 				return ['.if', c, 
 					re($body, env, function(x){ return ['.return', [tr, x]] }),
-					[t, trx]
+					['.return', [t, trx]]
 				];
 			})]],
 			['.return', [tr]]

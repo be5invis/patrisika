@@ -1,12 +1,11 @@
-// PATRISIKA: Deorgonalification
-// CPS-style Deorthogonalification, based on Danvy and Filinski's work
+// PATRISIKA: Code Generation
+// In this pass we translate regularized Patrisika AST into SpiderMonkey AST.
 
 var syntax_rule = require('../commons/match.js').syntax_rule;
 var _ = require('../commons/match.js')._;
 var atom = require('../commons/match.js').atom;
 var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
-var isStatement = require('../commons/nodetype.js').isStatement;
 
 var util = require('util');
 

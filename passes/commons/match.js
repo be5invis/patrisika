@@ -12,13 +12,13 @@ function buildPattern(pattern){
 		return function(x, w){
 			if(pattern.subpattern) {
 				if(pattern.subpattern(x, w)) {
-					w[pattern.id] = x;
+					if(w) w[pattern.id] = x;
 					return true
 				} else {
 					return false
 				}
 			} else {
-				w[pattern.id] = x;
+				if(w) w[pattern.id] = x;
 				return true			
 			}
 		} 
@@ -32,7 +32,7 @@ function buildPattern(pattern){
 				for(var j = 0; j < header.length; j++){
 					if(!header[j](list[j], w)) return false;
 				};
-				w[rearid] = list.slice(header.length);
+				if(w) w[rearid] = list.slice(header.length);
 				return true;
 			}
 		} else {
@@ -74,3 +74,4 @@ exports._ = _;
 exports.atom = function(x){ return typeof x === 'string' }
 exports.empty = function(x){ return !x }
 exports.any = function(x){ return true }
+exports.prim = function(x){ return exports.atom(x) && /^\W/.test(x) }
