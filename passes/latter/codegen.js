@@ -155,6 +155,18 @@ var te = syntax_rule(
 			argument: te(this.argument)
 		}
 	}],
+	[['.hash', ',..pairs'], function(form){
+		return {
+			type: 'ObjectExpression',
+			properties: this.pairs.map(function(pair){
+				return {
+					key: {type: 'Literal', value: pair[0]},
+					value: te(pair[1]),
+					kind: 'init'
+				}
+			})
+		}
+	}],
 	[[',callee', ',..args'], function(form){
 		return {
 			type: 'CallExpression',

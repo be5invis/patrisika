@@ -74,4 +74,4 @@ exports._ = _;
 exports.atom = function(x){ return typeof x === 'string' }
 exports.empty = function(x){ return !x }
 exports.any = function(x){ return true }
-exports.prim = function(x){ return exports.atom(x) && /^\W/.test(x) }
+exports.prim = function(x){ return exports.atom(x) && (x === '.list' || /^\W+$/.test(x)) }

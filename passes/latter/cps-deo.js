@@ -19,7 +19,9 @@ var newt = function(){
 	};
 }();
 
-function RET(x){ return ['.return', x] }
+function RET(x){ return ['.return', x] };
+function KEY(x){ return x[0] };
+function VAL(x){ return x[1] };
 
 // Optimization: Find out all plain subforms.
 var plain = syntax_rule(
@@ -46,6 +48,21 @@ var plain = syntax_rule(
 		};
 		return a ;
 	}],
+	[['.hash', ',..args'], function(form){
+		var a = ['.hash'];
+		for(var j = 1; j < form.length; j++){
+			a[j] = [form[j][0], plain(form[j][1])];
+		};
+		for(var j = 1; j < a.length; j++){
+			if(a[j][1] instanceof Array && (a[j][1][0] === '&' || a[j][1][0] === '&!')) {
+				return ['&'].concat(a);
+			}
+			if(!(a[j][1] && (a[j][1][0] === '.plain'))){
+				return a
+			}
+		};
+		return ['.plain', a];
+	}],
 	[[',..call'], function(form){
 		var j0 = prim(form[0]) ? 1 : 0;
 		var a = form.slice(0, j0).concat(form.slice(j0).map(plain));
@@ -57,7 +74,7 @@ var plain = syntax_rule(
 				return a
 			}
 		};
-		return ['.plain', a.slice(0, j0).concat(a.slice(j0))];
+		return ['.plain', a];
 	}],
 	[atom, function(form){ 
 		if(/^\w/.test(form)) return ['.plain', form]
@@ -248,11 +265,32 @@ var re = syntax_rule(
 				})
 			})
 		}],
+	[	['&', '.hash', ',..pairs'],
+		['.hash', ',..pairs'],
+		function(form, env, ctx){
+			var $keys = this.pairs.map(KEY);
+			var $values = this.pairs.map(VAL);
+			return re$($values, env, function(x$){
+				var a = [];
+				for(var j = 0; j < $keys.length; j++){
+					a[j] = [$keys[j], x$[j]]
+				};
+				return ctx(['.hash'].concat(a));
+			})
+		}],
+	[	['&', _(prim, 'operator'), ',..args'],
+		[_(prim, 'operator'), ',..args'],
+		function(form, env, ctx){
+			var $operator = this.operator, $args = this.args;
+			return re$($args, env, function(x$){
+				return ctx([$operator].concat(x$))
+			})
+		}],
 	[	['&', ',callee', ',..args'], 
 		[',callee', ',..args'], 
 		function(form, env, ctx){
 			var $args = this.args, $callee = this.callee;
-			return re($callee, env, function(x0){
+			return ra($callee, env, function(x0){
 				return re$($args, env, function(x$){
 					return ctx([x0].concat(x$))
 				})
@@ -272,11 +310,10 @@ function ra(form, env, ctx){
 	})
 }
 function re$(form, env, ctx){
-	if(!form.length) return ctx(null)
+	if(!form.length) return ctx([])
 	return ra(form[0], env, function(x0){
 		return re$(form.slice(1), env, function(x$){
-			if(x$) return ctx([x0].concat(x$))
-			else return ctx([x0])
+			return ctx([x0].concat(x$))
 		})
 	})
 }
