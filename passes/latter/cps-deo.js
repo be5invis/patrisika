@@ -117,14 +117,7 @@ function id(x){ return x }
 // RS: regularize in statement environment, with return value dropped
 // ctx accepts regularized form, and combines it with incoming subforms.
 var rs = syntax_rule(
-	[['.return', ',x'], function(form, env, ctx){ return re(this.x, env, function(x){
-		// ctx is not important, and yes, we did DCE here by just simply
-		// drop ctx.
-		return ['.return', x]
-	}) }],
-	[['.throw', ',x'], function(form, env, ctx){ return re(this.x, env, function(x){
-		return ['.throw', x]
-	}) }],
+	// NOTE: Treatment on Return and Throw nodes are IDENTICAL to those in re.
 	[['.if', ',cond', ',consequent'], function(form, env, ctx){ return re(form.concat([['.unit']]), env, ctx)}],
 	[['.if', ',cond', ',consequent', ',alternate'], function(form, env, ctx){
 		var $consequent = this.consequent;
