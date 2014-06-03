@@ -9,7 +9,16 @@ var any = require('../commons/match.js').any;
 
 var util = require('util');
 
-
+function tb(form){
+	var s = ts(form);
+	if(s.type !== 'BlockStatement') {
+		return {
+			type: 'BlockStatement',
+			body: [s]
+		}
+	};
+	return s;
+}
 var ts = syntax_rule(
 	[['.locals', ',..ids'], function(form){
 		return {
@@ -53,9 +62,26 @@ var ts = syntax_rule(
 			body: ts(this.body)
 		}
 	}],
+	[['.try', ',block', ',param', ',handler'], function(form){
+		return {
+			type: 'TryStatement',
+			block: tb(this.block),
+			handlers: [{
+				type: 'CatchClause',
+				param: te(this.param),
+				body: tb(this.handler)
+			}]
+		}
+	}],
 	[['.return', ',argument'], function(form){
 		return {
 			type: 'ReturnStatement',
+			argument: te(this.argument)
+		}
+	}],
+	[['.throw', ',argument'], function(form){
+		return {
+			type: 'ThrowStatement',
 			argument: te(this.argument)
 		}
 	}],
@@ -93,7 +119,7 @@ var te = syntax_rule(
 		return {
 			type: 'FunctionExpression',
 			params: this.args.map(te),
-			body: ts(this.body),
+			body: tb(this.body),
 			expression: false,
 			generator: false
 		}
