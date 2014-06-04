@@ -6,6 +6,7 @@ var _ = require('../commons/match.js')._;
 var atom = require('../commons/match.js').atom;
 var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
+var ref = require('../commons/match.js').ref;
 
 var util = require('util');
 
@@ -111,11 +112,6 @@ var logop = Binopoid('LogicalExpression');
 
 var te = syntax_rule(
 	[['.lambda', ',args', ',body'], function(form){
-		if(this.body instanceof Array && this.body[0] === '.begin'){
-			this.body = this.body
-		} else {
-			this.body = ['.begin', this.body]
-		}
 		return {
 			type: 'FunctionExpression',
 			params: this.args.map(te),
@@ -124,16 +120,25 @@ var te = syntax_rule(
 			generator: false
 		}
 	}],
-	[['.lambda', ',args', ',body', ',locals'], function(form){
-		if(this.body instanceof Array && this.body[0] === '.begin'){
-			this.body = ['.begin', ['.locals'].concat(this.locals)].concat(this.body.slice(1))
-		} else {
-			this.body = ['.begin', ['.locals'].concat(this.locals), this.body]
-		}
+	[['.lambda', ',args', ',body', ',scope'], function(form){
+		var body = tb(this.body);
+		var s = this.scope;
+		var locals = s.locals;
+		body.body.unshift({
+			type: "VariableDeclaration",
+			kind: "var",
+			declarations: locals.map(function(id){
+				return {
+					type: "VariableDeclarator",
+					id: {type: "Identifier", name: s.castName(id)},
+					init: null
+				}
+			})
+		});
 		return {
 			type: 'FunctionExpression',
 			params: this.args.map(te),
-			body: ts(this.body),
+			body: body,
 			expression: false,
 			generator: false
 		}
@@ -200,7 +205,8 @@ var te = syntax_rule(
 			arguments: this.args.map(te)
 		}
 	}],
-	[atom, function(form){ return { type: 'Identifier', name: form }}],
+	[ref, function(form){ return { type: 'Identifier', name: form.resolve() } }],
+	[atom, function(form){ return { type: 'Identifier', name: form } }],
 	[any, function(form){
 		throw new Error('Unknown node type ' + form)
 	}]

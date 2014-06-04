@@ -10,6 +10,13 @@ var atom = require('../commons/match.js').atom;
 var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
 var prim = require('../commons/match.js').prim;
+var ref = require('../commons/match.js').ref;
+
+var Scope = require('../commons/scope.js').Scope;
+
+function isDelaied(form) {
+	return form instanceof Array && (form[0] === '&' || form[0] === '&!')
+}
 
 
 var newt = function(){
@@ -26,50 +33,63 @@ function VAL(x){ return x[1] };
 
 // Optimization: Find out all trivial subforms.
 var trivial = syntax_rule(
-	[['.lambda', ',args', ',body'], function(form){
-		var b = trivial(this.body);
+	[['.lambda', ',args', ',body'], function(form, env){
+		var derived = new Scope(env);
+		for(var j = 0; j < this.args.length; j++){
+			derived.declare(this.args[j], true);
+		}
+		var b = trivial(this.body, derived);
 		if(b instanceof Array && (b[0] === '&' || b[0] === '&!')) {
-			var env = {};
-			env.isGenerator = true;
-			env.tStep = newt();
-			env.tNext = newt();
-			env.tCatch = newt();
+			derived.isGenerator = true;
+			derived.tStep = newt();
+			derived.tNext = newt();
+			derived.tCatch = newt();
 			return ['.trivial', ['.lambda', this.args, ['.begin', 
-				['=', env.tStep, ['.lambda', [], re(b, env, GEN_FINISH)]],
-				['=', env.tNext, ['.lambda', ['x'], ['.try', ['.return', [env.tStep, 'x']], 'ex', ['.return', [env.tCatch, 'ex']]]]],
-				['=', env.tCatch, ['.lambda', ['e'], ['.throw', 'e']]],
-				['.return', env.tNext]
-			]]]
+				['=', derived.tStep, ['.lambda', [], re(b, derived, GEN_FINISH)]],
+				['=', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], 'ex', ['.return', [derived.tCatch, 'ex']]]]],
+				['=', derived.tCatch, ['.lambda', ['e'], ['.throw', 'e']]],
+				['.return', derived.tNext]
+			], derived]]
 		} else {
-			return ['.trivial', ['.lambda', this.args, re(b, {}, RET)]]
+			return ['.trivial', ['.lambda', this.args, re(b, derived, RET), derived]]
 		}
 	}],
-	[['.quote', ',x'], function(form){ return ['.trivial', form] }],
-	[['.t', ',x'], function(form){ return ['.trivial', form] }],
-	[['&!', ',x'], function(form){ return ['&!', trivial(this.x)] }],
+	[['.quote', ',x'], function(form, env){ return ['.trivial', form] }],
+	[['.t', ',x'], function(form, env){ return ['.trivial', form] }],
+	[['.local', _('x', atom)], function(form, env){ env.declare(this.x); return ['.trivial', env.use(this.x)] }],
+	[['&!', ',x'], function(form, env){ return ['&!', trivial(this.x, env)] }],
 	[['.if', ',..args'],
 	 ['.begin', ',..args'],
 	 ['.while', ',..args'],
 	 ['.return', ',..args'], 
-	 ['.throw', ',..args'], 
-	 ['.try', ',..args'], function(form){ 
-		var a = [form[0]].concat(form.slice(1).map(trivial));
+	 ['.throw', ',..args'], function(form, env){ 
+		var a = [form[0]];
+		for(var j = 1; j < form.length; j++){
+			a[j] = trivial(form[j], env)
+		}
 		for(var j = 1; j < a.length; j++){
-			if(a[j] instanceof Array && (a[j][0] === '&' || a[j][0] === '&!')) {
+			if(isDelaied(a[j])) {
 				return ['&'].concat(a);
 			}
 		};
 		return a ;
 	}],
-	[['.hash', ',..args'], function(form){
+	[['.try', ',block', _('param', atom), ',handler'], function(form, env){
+		var $block = trivial(this.block, env);
+		var $handler = trivial(this.handler, env);
+		env.declare(this.param);
+		if(isDelaied($block) || isDelaied($handler)) { return ['&', '.try', $block, ['.trivial', env.use(this.param)], $handler] }
+		else { return ['.try', $block, ['.trivial', env.use(this.param)], $handler] }
+	}],
+	[['.hash', ',..args'], function(form, env){
 		var a = ['.hash'];
 		for(var j = 1; j < form.length; j++){
-			a[j] = [form[j][0], trivial(form[j][1])];
+			a[j] = [form[j][0], trivial(form[j][1], env)];
 		};
 		var delaied = false;
 		var trivialForm = true;
 		for(var j = 1; j < a.length; j++){
-			if(a[j][1] instanceof Array && (a[j][1][0] === '&' || a[j][1][0] === '&!')) {
+			if(isDelaied(a[j][1])) {
 				delaied = true
 			}
 			if(!(a[j][1] && (a[j][1][0] === '.trivial'))){
@@ -84,13 +104,16 @@ var trivial = syntax_rule(
 			return a;
 		}
 	}],
-	[[',..call'], function(form){
+	[[',..call'], function(form, env){
 		var j0 = prim(form[0]) ? 1 : 0;
-		var a = form.slice(0, j0).concat(form.slice(j0).map(trivial));
+		var a = form.slice(0);
+		for(var j = j0; j < form.length; j++){
+			a[j] = trivial(form[j], env)
+		}
 		var delaied = false;
 		var trivialForm = true;
 		for(var j = j0; j < a.length; j++){
-			if(a[j] instanceof Array && (a[j][0] === '&' || a[j][0] === '&!')) {
+			if(isDelaied(a[j])) {
 				delaied = true
 			}
 			if(!(a[j] && (a[j][0] === '.trivial'))){
@@ -105,9 +128,9 @@ var trivial = syntax_rule(
 			return a;
 		}
 	}],
-	[atom, function(form){ 
-		if(/^\w/.test(form)) return ['.trivial', form]
-		else return form
+	[atom, function(form, env){ 
+		if(/^\W/.test(form)) return form
+		else return ['.trivial', env.use(form)]
 	}],
 	[any, function(form){ return form }]
 )
@@ -292,6 +315,7 @@ var re = syntax_rule(
 	}],
 	// Expressions
 	[['.lambda', ',args', ',body'], function(form, env, ectx){ return ctx(form) }],
+	[['.lambda', ',args', ',body', ',scope'], function(form, env, ectx){ return ctx(form) }],
 	[['.quote', ',x'], function(form, env, ctx){ return ctx(form) }],
 	[['.unit'], function(form, env, ctx){ return ctx(form) }],
 	[['.trivial', ',x'], function(form, env, ctx){ return ctx(this.x) }],
@@ -348,8 +372,8 @@ var re = syntax_rule(
 				return ctx(['.hash'].concat(a));
 			})
 		}],
-	[	['&', _(prim, 'operator'), ',..args'],
-		[_(prim, 'operator'), ',..args'],
+	[	['&', _('operator', prim), ',..args'],
+		[_('operator', prim), ',..args'],
 		function(form, env, ctx){
 			var $operator = this.operator, $args = this.args;
 			return re$($args, env, function(x$){
@@ -419,6 +443,7 @@ function mb(form){
 	}
 }
 
-exports.pass = function(form){
-	return mb(rs(trivial(form), {}, id))
+exports.pass = function(form, externScope){
+	var globalScope = new Scope(externScope);
+	return mb(rs(trivial(form, globalScope), globalScope, id))
 }
