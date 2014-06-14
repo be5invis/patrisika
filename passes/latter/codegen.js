@@ -124,17 +124,19 @@ var te = syntax_rule(
 		var body = tb(this.body);
 		var s = this.scope;
 		var locals = s.locals;
-		body.body.unshift({
-			type: "VariableDeclaration",
-			kind: "var",
-			declarations: locals.map(function(id){
-				return {
-					type: "VariableDeclarator",
-					id: {type: "Identifier", name: s.castName(id)},
-					init: null
-				}
-			})
-		});
+		if(locals.length){
+			body.body.unshift({
+				type: "VariableDeclaration",
+				kind: "var",
+				declarations: locals.map(function(id){
+					return {
+						type: "VariableDeclarator",
+						id: {type: "Identifier", name: s.castName(id)},
+						init: null
+					}
+				})
+			});
+		}
 		return {
 			type: 'FunctionExpression',
 			params: this.args.map(te),

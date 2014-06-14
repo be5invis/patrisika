@@ -33,39 +33,39 @@ function VAL(x){ return x[1] };
 
 // Optimization: Find out all trivial subforms.
 var trivial = syntax_rule(
-	[['.lambda', ',args', ',body'], function(form, env){
-		return ['.trivial', ['.lambda', this.args, this.body]];
+	[['.lambda', ',args', ',body'], function(form){
+		return ['.trivial', ['.lambda', this.args, trivial(this.body)]]
 	}],
-	[['.quote', ',x'], function(form, env){ return ['.trivial', form] }],
-	[['.t', ',x'], function(form, env){ return ['.trivial', form] }],
-	[['.yield', ',x'], function(form, env){ return ['&!', trivial(this.x, env)] }],
+	[['.quote', ',x'], function(form){ return ['.trivial', form] }],
+	[['.t', ',x'], function(form){ return ['.trivial', form] }],
+	[['.yield', ',x'], function(form){ return ['&!', trivial(this.x)] }],
 	[['.if', ',..args'],
 	 ['.begin', ',..args'],
 	 ['.while', ',..args'],
 	 ['.return', ',..args'], 
-	 ['.throw', ',..args'], function(form, env){ 
+	 ['.throw', ',..args'], function(form){ 
 		var a = [form[0]];
 		for(var j = 1; j < form.length; j++){
-			a[j] = trivial(form[j], env)
+			a[j] = trivial(form[j])
 		}
 		for(var j = 1; j < a.length; j++){
 			if(isDelaied(a[j])) {
-				return ['&'].concat(a);
+				return ['&', a];
 			}
 		};
 		return a ;
 	}],
-	[['.try', ',block', [_('param', atom)], ',handler'], function(form, env){
-		var $block = trivial(this.block, env);
-		var $handler = trivial(this.handler, env);
-		env.declare(this.param);
-		if(isDelaied($block) || isDelaied($handler)) { return ['&', '.try', $block, [env.use(this.param)], $handler] }
-		else { return ['.try', $block, [env.use(this.param)], $handler] }
+	[['.try', ',block', [_('param', atom)], ',handler'], function(form){
+		var $block = trivial(this.block);
+		var $handler = trivial(this.handler);
+		//env.declare(this.param);
+		if(isDelaied($block) || isDelaied($handler)) { return ['&', '.try', $block, [this.param], $handler] }
+		else { return ['.try', $block, [this.param], $handler] }
 	}],
-	[['.hash', ',..args'], function(form, env){
+	[['.hash', ',..args'], function(form){
 		var a = ['.hash'];
 		for(var j = 1; j < form.length; j++){
-			a[j] = [form[j][0], trivial(form[j][1], env)];
+			a[j] = [form[j][0], trivial(form[j][1])];
 		};
 		var delaied = false;
 		var trivialForm = true;
@@ -78,18 +78,18 @@ var trivial = syntax_rule(
 			}
 		};
 		if(delaied){
-			return ['&'].concat(a)
+			return ['&', a]
 		} else if(trivialForm){
 			return ['.trivial', a];
 		} else {
 			return a;
 		}
 	}],
-	[[',..call'], function(form, env){
+	[[',..call'], function(form){
 		var j0 = prim(form[0]) ? 1 : 0;
 		var a = form.slice(0);
 		for(var j = j0; j < form.length; j++){
-			a[j] = trivial(form[j], env)
+			a[j] = trivial(form[j])
 		}
 		var delaied = false;
 		var trivialForm = true;
@@ -102,14 +102,14 @@ var trivial = syntax_rule(
 			}
 		};
 		if(delaied){
-			return ['&'].concat(a)
+			return ['&', a]
 		} else if(trivialForm){
 			return ['.trivial', a];
 		} else {
 			return a;
 		}
 	}],
-	[atom, function(form, env){ 
+	[atom, function(form){ 
 		if(/^\W/.test(form)) return form
 		else return ['.trivial', form]
 	}],
@@ -175,10 +175,10 @@ var re = syntax_rule(
 		})
 	}],
 	// Flow Controls, Deferred
-	[['&', '.begin', ',x'], function(form, env, k){
+	[['&', ['.begin', ',x']], function(form, env, k){
 		return re(this.x, env, k)
 	}],
-	[['&', '.begin', ',x', ',..rest'], function(form, env, k){
+	[['&', ['.begin', ',x', ',..rest']], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
 			return re(['&', '.begin'].concat($rest), env, function(v){
@@ -186,10 +186,10 @@ var re = syntax_rule(
 			})
 		})
 	}],
-	[['&', '.if', ',test', ',consequent'], function(form, env, k){
+	[['&', ['.if', ',test', ',consequent']], function(form, env, k){
 		return re(form.concat([['.unit']]), env, k)
 	}],
-	[['&', '.if', ',test', ',consequent', ',alternate'], function(form, env, k){
+	[['&', ['.if', ',test', ',consequent', ',alternate']], function(form, env, k){
 		var $test = this.test, $consequent = this.consequent, $alternate = this.alternate;
 		var t = newt();
 		var tx = newt();
@@ -203,7 +203,7 @@ var re = syntax_rule(
 			})
 		];
 	}],
-	[['&', '.while', ',test', ',body'], function(form, env, k){
+	[['&', ['.while', ',test', ',body']], function(form, env, k){
 		var $test = this.test, $body = this.body;
 		var t = newt();
 		var tr = newt();
@@ -220,8 +220,9 @@ var re = syntax_rule(
 			['.return', [tr]]
 		];
 	}],
-	[['&', '.try', ',block', [',param'], ',handler'], function(form, env, k){
+	[['&', ['.try', ',block', [',param'], ',handler']], function(form, env, k){
 		var $block = this.block, $param = this.param, $handler = this.handler;
+		env.declare($param);
 		var t = newt(), tx = newt(), te = newt();
 		var b = newt();
 		return ['.begin',
@@ -230,7 +231,7 @@ var re = syntax_rule(
 			['.set', b, env.tCatch],
 			['.set', env.tStep, ['.lambda', [], re($block, env, function(x){ return ['.return', [t, x]]})]],
 			['.set', env.tCatch, ['.lambda', [te], ['.begin',
-				['.set', $param, te],
+				['.set', env.use($param), te],
 				re($handler, env, function(x){
 					return ['.begin',
 						['.set', env.tCatch, b],
@@ -242,14 +243,14 @@ var re = syntax_rule(
 		]
 	}],
 	// Flow controls, Plain
-	[['&', '.return', ',x'], ['.return', ',x'], function(form, env, k){
+	[['&', ['.return', ',x']], ['.return', ',x'], function(form, env, k){
 		if(env.isGenerator){
 			return re(this.x, env, GEN_FINISH)
 		} else {
 			return re(this.x, env, RET)
 		}
 	}],
-	[['&', '.throw', ',x'], ['.throw', ',x'], function(form, env, k){
+	[['&', ['.throw', ',x']], ['.throw', ',x'], function(form, env, k){
 		if(env.isGenerator){
 			return re(this.x, env, function(x){ return ['.return', [env.tCatch, x]] })
 		} else {
@@ -299,8 +300,9 @@ var re = syntax_rule(
 		var $block = this.block;
 		var $param = this.param;
 		var $handler = this.handler;
+		env.declare($param);
 		var t = newt();
-		return ['.begin', ['.try', re($block, env, function(x){ return ['.set', t, x] }), [$param], 
+		return ['.begin', ['.try', re($block, env, function(x){ return ['.set', t, x] }), [env.use($param)],
 			re($handler, env, function(x){ return ['.set', t, x] })], k(t)];
 	}],
 	// Trivial Expressions
@@ -311,7 +313,7 @@ var re = syntax_rule(
 			for(var j = 0; j < this.args.length; j++){
 				derived.declare(this.args[j], true);
 			}
-			var b = trivial(this.body, derived);
+			var b = this.body;
 			if(b instanceof Array && (b[0] === '&' || b[0] === '&!')) {
 				derived.isGenerator = true;
 				derived.tStep = newt();
@@ -366,9 +368,9 @@ var re = syntax_rule(
 	[['.trivial', ',x'], function(form, env, k){ return k(this.x) }],
 
 	// Other Expressions
-	[	['&', '.set', ['&', '.', ',obj', ',field'], ',right'], 
-		['&', '.set', ['.trivial', ['.', ',obj', ',field']], ',right'], 
-		['&', '.set', ['.', ',obj', ',field'], ',right'],
+	[	['&', ['.set', ['&', ['.', ',obj', ',field']], ',right']], 
+		['&', ['.set', ['.trivial', ['.', ',obj', ',field']], ',right']], 
+		['&', ['.set', ['.', ',obj', ',field'], ',right']],
 		['.set', ['.', ',obj', ',field'], ',right'],
 		['.set', ['.trivial', ['.', ',obj', ',field']], ',right'], 
 		function (form, env, k){
@@ -381,17 +383,17 @@ var re = syntax_rule(
 				})
 			})
 		}],
-	[	['&', '.set', ['.trivial', ',left'], ',right'],
-		['&', '.set', ',left', ',right'], 
+	[	['&', ['.set', ['.trivial', ',left'], ',right']],
+		['&', ['.set', ',left', ',right']], 
 		['.set', ['.trivial', ',left'], ',right'], 
 		['.set', ',left', ',right'], 
 		function (form, env, k){
 			var $left = this.left, $right = this.right;
 			return re($right, env, function(e){ return k(['.set', $left, e]) })
 		}],
-	[	['&', ['.', ',left', ',right'], ',..args'],
-		['&', ['.trivial', ['.', ',left', ',right']], ',..args'],
-		['&', ['&', '.', ',left', ',right'], ',..args'], 
+	[	['&', [['.', ',left', ',right'], ',..args']],
+		['&', [['.trivial', ['.', ',left', ',right']], ',..args']],
+		['&', [['&', '.', ',left', ',right'], ',..args']], 
 		[['.', ',left', ',right'], ',..args'], 
 		function (form, env, k){
 			var $left = this.left, $right = this.right, $args = this.args;
@@ -405,7 +407,7 @@ var re = syntax_rule(
 				})
 			})
 		}],
-	[	['&', '.hash', ',..pairs'],
+	[	['&', ['.hash', ',..pairs']],
 		['.hash', ',..pairs'],
 		function(form, env, k){
 			var $keys = this.pairs.map(KEY);
@@ -418,7 +420,33 @@ var re = syntax_rule(
 				return k(['.hash'].concat(a));
 			})
 		}],
-	[	['&', _('operator', prim), ',..args'],
+	[['&', ['&&']], function(form, env, k){ return k(['.quote', true]) }],
+	[['&', ['&&', ',x']], function(form, env, k){ return re(this.x, env, k) }],
+	[['&', ['&&', ',x', ',..rest']], function(form, env, k){
+		var $rest = this.rest;
+		return ra(this.x, env, function(x){
+			var t = newt();
+			var tx = newt();
+			return ['.begin', 
+				['.set', t, ['.lambda', [tx], k(tx)]],
+				['.if', x, re(['&', ['&&'].concat(this.rest)], env, function(x){ return ['.return', [t, x]] }), ['.return', [t, x]]]
+			]
+		})
+	}],
+	[['&', ['||']], function(form, env, k){ return k(['.quote', false]) }],
+	[['&', ['||', ',x']], function(form, env, k){ return re(this.x, env, k) }],
+	[['&', ['||', ',x', ',..rest']], function(form, env, k){
+		var $rest = this.rest;
+		return ra(this.x, env, function(x){
+			var t = newt();
+			var tx = newt();
+			return ['.begin', 
+				['.set', t, ['.lambda', [tx], k(tx)]],
+				['.if', x, ['.return', [t, x]], re(['&', ['||'].concat(this.rest)], env, function(x){ return ['.return', [t, x]] })]
+			]
+		})
+	}],
+	[	['&', [_('operator', prim), ',..args']],
 		[_('operator', prim), ',..args'],
 		function(form, env, k){
 			var $operator = this.operator, $args = this.args;
@@ -426,7 +454,7 @@ var re = syntax_rule(
 				return k([$operator].concat(x$))
 			})
 		}],
-	[	['&', ',callee', ',..args'], 
+	[	['&', [',callee', ',..args']], 
 		[',callee', ',..args'], 
 		function(form, env, k){
 			var $args = this.args, $callee = this.callee;
@@ -489,5 +517,5 @@ function mb(form){
 
 exports.pass = function(form, externScope){
 	var globalScope = new Scope(externScope);
-	return mb(rs(trivial(form, globalScope), globalScope, id))
+	return mb(rs(trivial(form), globalScope, id))
 }

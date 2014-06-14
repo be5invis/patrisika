@@ -1,4 +1,1 @@
-[.lambda [] [ .begin
-	[.local x]
-	[.lambda [y] [+ x [* x y]]]
-]]
+[.lambda [] [|| [.yield a] [.yield b]]]

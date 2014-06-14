@@ -29,7 +29,7 @@ invoke
 
 // Tokens
 identifier "Identifier"
-	= id:$([a-zA-Z\.\-_/+*<=>!?$%_&~^@#] [a-zA-Z0-9\-_/+*<=>!?$%_&~^@#]*) { return id }
+	= id:$([a-zA-Z\.\-_/+*<=>!?$%_&~^@#\|] [a-zA-Z0-9\-_/+*<=>!?$%_&~^@#\|]*) { return id }
 numberliteral "Numeric Literal"
 	= '-' positive:numberliteral { return -positive }
 	/ ("0x" / "0X") hexdigits:$([0-9a-fA-F]+) { return parseInt(hexdigits, 16) }
