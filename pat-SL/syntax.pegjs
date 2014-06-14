@@ -1,80 +1,25 @@
-{
-	var textIndentStack = [];
-	var textIndent = "";
-	function Reference(id){
-		this.id = id;
-	}
-	function composeLine(head, rear){
-		var j;
-		if(head instanceof Array && (j = head.indexOf(":")) >= 0){
-			return head.slice(0, j).concat(rear, head.slice(j + 1))
-		} else if(head instanceof Array){
-			var r = [];
-			for(var j = 0; j < head.length; j++){
-				r[j] = composeLine(head[j], rear)
-			};
-			return r;
-		} else {
-			return head
-		}
-	}
-}
-
-start = it:block {
+start = OPTIONAL_EXPRESSION_SPACES it:invoke OPTIONAL_EXPRESSION_SPACES {
 	return ['.begin'].concat(it)
 }
 // Expression
-factorStart
-	= identifier / numberliteral / stringliteral / "[" / "(" / "{"
 factor
 	= group
 	/ identifier
-	/ numberliteral
-	/ stringliteral
+	/ it:numberliteral { return ['.quote', it] }
+	/ it:stringliteral { return ['.quote', it] }
 
 group
-	= "[" OPTIONAL_EXPRESSION_SPACES it:groupInner OPTIONAL_EXPRESSION_SPACES "]" { return it }
+	= "[" OPTIONAL_EXPRESSION_SPACES "]" { return [] }
+	/ "(" OPTIONAL_EXPRESSION_SPACES ")" { return [] }
+	/ "{" OPTIONAL_EXPRESSION_SPACES "}" { return ['.list'] }
+	/ "{." OPTIONAL_EXPRESSION_SPACES ".}" { return ['.hash'] }
+	/ "[" OPTIONAL_EXPRESSION_SPACES it:invoke OPTIONAL_EXPRESSION_SPACES "]" { return it }
 	/ "(" OPTIONAL_EXPRESSION_SPACES it:invoke OPTIONAL_EXPRESSION_SPACES ")" { return it }
-	/ "{" OPTIONAL_EXPRESSION_SPACES it:groupInner OPTIONAL_EXPRESSION_SPACES "}" { return ['.list'].concat(it) }
-	/ "{." OPTIONAL_EXPRESSION_SPACES it:groupInner OPTIONAL_EXPRESSION_SPACES ".}" { return ['.object'].concat(it) }
-term
-	= head:factor rear:(qualifier*) {
-		var res = head;
-		for(var j = 0; j < rear.length; j++){
-			res = ['.', res, rear[j]];
-		};
-		return res;
-	}
-qualifier
-	= "." property:identifier { return ['.quote', property] }
-groupInner
-	= &(factorStart) it:invoke { return it }
-	/ &(NEWLINE) INDENT_CLEAR_ON
-	  it: block
-	  INDENT_CLEAR_OFF
-	  NEWLINE* { return it }
-block
-	= indentBlockContent
-	/ NEWLINE_INDENT_SAME? it:blockContent NEWLINE_INDENT_SAME? { return it }
-indentBlockContent
-	= NEWLINE_INDENT_ADD
-	  it:blockContent
-	  INDENT_REMOVE { return it }	
-blockContent
-	= head:line rear:(NEWLINE_INDENT_SAME line)* {
-		var res = [head]
-		for(var j = 0; j < rear.length; j++){
-			res.push(rear[j][1])
-		};
-		return res;
-	}
-line
-	= head:invoke OPTIONAL_EXPRESSION_SPACES ":" OPTIONAL_EXPRESSION_SPACES rear:line { return head.concat([rear]) }
-	/ head:invoke OPTIONAL_EXPRESSION_SPACES rear:indentBlockContent { return head.concat(rear) }
-	/ invoke
+	/ "{" OPTIONAL_EXPRESSION_SPACES it:invoke OPTIONAL_EXPRESSION_SPACES "}" { return ['.list'].concat(it) }
+	/ "{." OPTIONAL_EXPRESSION_SPACES it:invoke OPTIONAL_EXPRESSION_SPACES ".}" { return ['.hash'].concat(it) }
 
 invoke
-	= head:term rear:(OPTIONAL_EXPRESSION_SPACES term)* { 
+	= head:factor rear:(OPTIONAL_EXPRESSION_SPACES factor)* { 
 		var res = [head]
 		for(var j = 0; j < rear.length; j++){
 			res.push(rear[j][1])
@@ -84,7 +29,7 @@ invoke
 
 // Tokens
 identifier "Identifier"
-	= id:$([a-zA-Z\-_/+*<=>!?$%_&~^@#] [a-zA-Z0-9\.\-_/+*<=>!?$%_&~^@#]*) { return new Reference(id) }
+	= id:$([a-zA-Z\.\-_/+*<=>!?$%_&~^@#] [a-zA-Z0-9\-_/+*<=>!?$%_&~^@#]*) { return id }
 numberliteral "Numeric Literal"
 	= '-' positive:numberliteral { return -positive }
 	/ ("0x" / "0X") hexdigits:$([0-9a-fA-F]+) { return parseInt(hexdigits, 16) }
@@ -120,29 +65,8 @@ COMMENT "Comment"
 SPACES "Space without Newline"
 	= $(SPACE_CHARACTER+)
 EXPRESSION_SPACE
-	= SPACE_CHARACTER
+	= SPACE_CHARACTER_OR_NEWLINE
 OPTIONAL_EXPRESSION_SPACES
 	= $(EXPRESSION_SPACE*)
-
 NEWLINE
 	= LINE_BREAK SPACE_CHARACTER_OR_NEWLINE*
-TEXT_IN_SEGMENT_LINEBREAK "Single Newline"
-	= LINE_BREAK INDENT_SAME !(LINE_BREAK)
-NEWLINE_INDENT_ADD
-	= LINE_BREAK SPACES? NEWLINE_INDENT_ADD
-	/ LINE_BREAK INDENT_ADD
-NEWLINE_INDENT_SAME
-	= LINE_BREAK SPACES? NEWLINE_INDENT_SAME
-	/ LINE_BREAK INDENT_SAME
-NEWLINE_INDENT_SAME_OR_MORE
-	= LINE_BREAK (SPACES? LINE_BREAK)* INDENT_SAME_OR_MORE
-
-POS = { return Position(offset()) }
-
-INDENT_CLEAR_ON  = { textIndentStack.push(textIndent); textIndent = "" }
-INDENT_CLEAR_OFF = { textIndent = textIndentStack.pop() }
-INDENT_ADD = spaces:SPACES & { return spaces.length > textIndent.length && spaces.slice(0, textIndent.length) === textIndent }
-                  { textIndentStack.push(textIndent); textIndent = spaces }
-INDENT_REMOVE = { textIndent = textIndentStack.pop() }
-INDENT_SAME = spaces:$(SPACES?) & { return spaces === textIndent }
-INDENT_SAME_OR_MORE = spaces:$(SPACES?) & { return spaces === textIndent || spaces.slice(0, textIndent.length) === textIndent }

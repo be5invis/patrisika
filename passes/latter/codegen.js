@@ -63,7 +63,7 @@ var ts = syntax_rule(
 			body: ts(this.body)
 		}
 	}],
-	[['.try', ',block', ',param', ',handler'], function(form){
+	[['.try', ',block', [',param'], ',handler'], function(form){
 		return {
 			type: 'TryStatement',
 			block: tb(this.block),
@@ -177,7 +177,7 @@ var te = syntax_rule(
 	[['.is', ',left', ',right'], binop('instanceof')],
 	[['&&', ',left', ',right'], logop('&&')],
 	[['||', ',left', ',right'], logop('||')],
-	[['=', ',left', ',right'], assop('=')],
+	[['.set', ',left', ',right'], assop('=')],
 	[['!', ',argument'], function(form) {
 		return {
 			type: "UnaryExpression",

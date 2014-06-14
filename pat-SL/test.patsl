@@ -1,7 +1,4 @@
-define [reverse1 stack1 stack2] : piecewise
-    stack1.isEmpty: stack2
-    otherwise: begin
-        local x [stack1.pop]
-        reverse1 stack1 [stack2.push x]
-
-define [reverse_stack s] [reverse1 s [empty_stack]]
+[.lambda [] [ .begin
+	[.local x]
+	[.lambda [y] [+ x [* x y]]]
+]]
