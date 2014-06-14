@@ -1,1 +1,1 @@
-[.lambda [] [|| [.yield a] [.yield b]]]
+[&& [.begin a b c] [.begin d e f]]

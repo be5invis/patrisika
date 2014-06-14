@@ -446,7 +446,30 @@ var re = syntax_rule(
 			]
 		})
 	}],
-	[	['&', [_('operator', prim), ',..args']],
+	[['&&'], function(form, env, k){ return k(['.quote', true]) }],
+	[['&&', ',x'], function(form, env, k){ return re(this.x, env, k) }],
+	[['&&', ',x', ',..rest'], function(form, env, k){
+		var $rest = this.rest;
+		return ra(this.x, env, function(x){
+			var t = newt();
+			return ['.begin', 
+				['.if', x, re(['&', ['&&'].concat(this.rest)], env, function(x){ return ['.set', t, x] }), ['.set', t, x]],
+				k(t)
+			]
+		})
+	}],
+	[['||'], function(form, env, k){ return k(['.quote', false]) }],
+	[['||', ',x'], function(form, env, k){ return re(this.x, env, k) }],
+	[['||', ',x', ',..rest'], function(form, env, k){
+		var $rest = this.rest;
+		return ra(this.x, env, function(x){
+			var t = newt();
+			return ['.begin', 
+				['.if', x, ['.set', t, x], re(['&', ['||'].concat(this.rest)], env, function(x){ return ['.set', t, x] })]
+				k(t),
+			]
+		})
+	}],	[	['&', [_('operator', prim), ',..args']],
 		[_('operator', prim), ',..args'],
 		function(form, env, k){
 			var $operator = this.operator, $args = this.args;
