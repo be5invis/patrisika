@@ -187,7 +187,7 @@ var re = syntax_rule(
 		})
 	}],
 	[['&', ['.if', ',test', ',consequent']], function(form, env, k){
-		return re(form.concat([['.unit']]), env, k)
+		return re(['&', ['.if', this.test, this.consequent, ['.unit']]], env, k)
 	}],
 	[['&', ['.if', ',test', ',consequent', ',alternate']], function(form, env, k){
 		var $test = this.test, $consequent = this.consequent, $alternate = this.alternate;
