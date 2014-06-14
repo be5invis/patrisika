@@ -1,79 +1,45 @@
-Patrisika
+Patrisika [Revented]
 ===================================
 
 An library converts orthogonal AST into SpiderMonkey AST.
 
-Semantic Definitions
+Semantics
 -----------------------------------
 AST for Patrisika is provided as JavaScript arraies. The following forms represents a node:
 
 ### 'identifier'
 Represents a variable.
-### ['.t', 'name']
-Represents a temporary variable.
-### ['.lit', value]
+### ['.quote', value]
 Represents a literal value.
-### ['.this']
-Represents the `this` reference.
-### ['.fn', patternParameters, nodeBody]
-Represents a function literal. Note that *patternParameters* matches the whole argument list.
+### ['.lambda', [...params], body]
+Defines an anonymous function
 ### ['.list', ...items]
-Represents an array literal.
-### ['.obj', ...['propName', propValue, ε | 'get' | 'set']]
-Represents an object literal.
+Represents an array.
+### ['.hash', ...['propName', propValue, ε | 'get' | 'set']]
+Represents an object.
 ### ['.', base, member]
 Represents a membering operation, i.e. `base[member]`.
 ### ['.if', condition, consequent, alternate?]
 Represents a conditional evaluation.
 ### ['.while', condition, body]
-Represents a while loop evaluation. It always returns `undefined`.
-### ['.seq', ...items]
+Represents a while loop evaluation. It returns the value of `body` in the last evaluation.
+### ['.begin', ...items]
 Represents a sequencial evaluation. Returns the last item evaluated.
 ### ['.return', value]
 Return a value. Similar to JavaScript `return` statement.
-### ['.label', 'sLabel', body]
-Declare a labelled expression. Labels are used by `.break` nodes.
-### ['.break', 'sLabel']
-Jumps to the position after the labelled expression `'sLabel'`.
+### ['.try', block, param, handler]
+Represents a exception handling expression. Returns the value of `block` normally, or the value of `handler1` when a exception is thrown during evaluating `block`.
+### ['.throw', value]
+Throws value as an exception
 ### [fn, ...args]
 Once `fn` is a valid node, it means a common function invocation.
-
-Current Passes
------------------------------------
-
-###Early Semantic Expansion
-- **expand-fn-literal** : Expand irregular and optional parameters of function literals
-- **expand-try-catch** : Regularize the 2nd argument of `[.try]` nodes
-- **expand-assignments** : Expand irregular assignments
-- **expand-this** : Expand `[.this]` nodes into `[.t]` nodes
-
-###Variable Scoping
-- **resolve-variable-scoping** : Create `[.local]` nodes to handle variable declarations, constant declarations, and variable renaming.
-- **convert-eqc** : Convert all `[=c]` nodes into `[=]` nodes. `[=c]` nondes have the same semantics as `[=]`s but are used for constant declarations only.
-
-###Later Semantic Expansion
-- **check-break** : Check and rename `[.label]` nodes and `[.break]` nodes.
-- **expand-object-literal** : Expand complex object literal (`[.obj]`) nodes into JavaScript-style nodes, which means that there is no 'get' or 'set' kind property pair.
-- **cps** : Convert sequences into nested callbacks.
-
-###Optimization
-- **expand-iife** : Expand immediately-invoked function expressions into straight statements.
-
-###Regularization
-
-- **regular-nest** : Convert freely-combined nodes into statement-expression hierarchy
-- **resolve-t-scoping** : "Declare" all T-variables used
-- **denest-seq** : Flatten nesting `[.seq]` nodes
-
-###Transformation
-- **codegen** : Convert Patrisika AST into Mozilla AST
 
 License
 -----------------------------------
 ###Patrisika
 Patrisika is a library about orthogonal AST for JavaScript
 
-Copyright (c) 2013, Belleve Invis and contributors
+Copyright (c) 2013-2014, Belleve Invis and contributors
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

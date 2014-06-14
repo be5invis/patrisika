@@ -23,15 +23,31 @@ var Hash = function() {};
 	});
 	Object.defineProperty(Hash.prototype, 'has', {
 		value: function(key) {
+			return (MANGLE + key) in this
+		},
+		enumerable: false
+	});
+	Object.defineProperty(Hash.prototype, 'owns', {
+		value: function(key) {
 			return OWNS(this, MANGLE + key)
 		},
 		enumerable: false
 	});
-	Object.defineProperty(Hash.prototype, 'forEach', {
+	Object.defineProperty(Hash.prototype, 'forEachOwn', {
 		value: function(f) {
 			for(var _key in this) {
 				if(OWNS(this, _key)) {
 					f(_key.slice(MANGLELENGTH), this[_key]);
+				}
+			}
+		},
+		enumerable: false
+	});
+	Object.defineProperty(Hash.prototype, 'rewriteOwn', {
+		value: function(f) {
+			for(var _key in this) {
+				if(OWNS(this, _key)) {
+					this[_key] = f(_key.slice(MANGLELENGTH), this[_key]);
 				}
 			}
 		},
