@@ -429,7 +429,7 @@ var re = syntax_rule(
 			var tx = newt();
 			return ['.begin', 
 				['.set', t, ['.lambda', [tx], k(tx)]],
-				['.if', x, re(['&', ['&&'].concat(this.rest)], env, function(x){ return ['.return', [t, x]] }), ['.return', [t, x]]]
+				['.if', x, re(['&', ['&&'].concat($rest)], env, function(x){ return ['.return', [t, x]] }), ['.return', [t, x]]]
 			]
 		})
 	}],
@@ -442,7 +442,7 @@ var re = syntax_rule(
 			var tx = newt();
 			return ['.begin', 
 				['.set', t, ['.lambda', [tx], k(tx)]],
-				['.if', x, ['.return', [t, x]], re(['&', ['||'].concat(this.rest)], env, function(x){ return ['.return', [t, x]] })]
+				['.if', x, ['.return', [t, x]], re(['&', ['||'].concat($rest)], env, function(x){ return ['.return', [t, x]] })]
 			]
 		})
 	}],
@@ -453,7 +453,7 @@ var re = syntax_rule(
 		return ra(this.x, env, function(x){
 			var t = newt();
 			return ['.begin', 
-				['.if', x, re(['&', ['&&'].concat(this.rest)], env, function(x){ return ['.set', t, x] }), ['.set', t, x]],
+				['.if', x, re(['&', ['&&'].concat($rest)], env, function(x){ return ['.set', t, x] }), ['.set', t, x]],
 				k(t)
 			]
 		})
@@ -465,11 +465,12 @@ var re = syntax_rule(
 		return ra(this.x, env, function(x){
 			var t = newt();
 			return ['.begin', 
-				['.if', x, ['.set', t, x], re(['&', ['||'].concat(this.rest)], env, function(x){ return ['.set', t, x] })]
+				['.if', x, ['.set', t, x], re(['&', ['||'].concat($rest)], env, function(x){ return ['.set', t, x] })],
 				k(t),
 			]
 		})
-	}],	[	['&', [_('operator', prim), ',..args']],
+	}],
+	[	['&', [_('operator', prim), ',..args']],
 		[_('operator', prim), ',..args'],
 		function(form, env, k){
 			var $operator = this.operator, $args = this.args;
@@ -487,6 +488,8 @@ var re = syntax_rule(
 				})
 			})
 		}],
+//	[['&', _('x', atom)], function(form, env, k){ return k(this.x) }],
+//	[['&', _('x', ['.t', ',name'])], function(form, env, k){ return k(this.x) }],
 	[any, function(form, env, k){ return k(form) }]
 );
 
