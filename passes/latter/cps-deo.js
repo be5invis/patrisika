@@ -10,7 +10,6 @@ var atom = require('../commons/match.js').atom;
 var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
 var prim = require('../commons/match.js').prim;
-var ref = require('../commons/match.js').ref;
 
 var Scope = require('../commons/scope.js').Scope;
 
@@ -18,13 +17,6 @@ function isDelaied(form) {
 	return form instanceof Array && (form[0] === '&' || form[0] === '&!')
 }
 
-
-var newt = function(){
-	var n = 0;
-	return function(){
-		return '_t' + (++n);
-	};
-}();
 
 function RET(x){ return ['.return', x] };
 function GEN_FINISH(x){ return ['.return', ['.hash', ['done', ['.quote', true]], ['value', x]]] };
@@ -39,6 +31,18 @@ var trivial = syntax_rule(
 	[['.quote', ',x'], function(form){ return ['.trivial', form] }],
 	[['.t', ',x'], function(form){ return ['.trivial', form] }],
 	[['.yield', ',x'], function(form){ return ['&!', trivial(this.x)] }],
+	[['.beta', ',args', ',body', ',..params'], function(form){
+		var a = [form[0], form[1]];
+		for(var j = 2; j < form.length; j++){
+			a[j] = trivial(form[j])
+		};
+		for(var j = 2; j < a.length; j++){
+			if(isDelaied(a[j])) {
+				return ['&', a];
+			}
+		};
+		return a;
+	}],
 	[['.if', ',..args'],
 	 ['.begin', ',..args'],
 	 ['.while', ',..args'],
@@ -53,7 +57,7 @@ var trivial = syntax_rule(
 				return ['&', a];
 			}
 		};
-		return a ;
+		return a;
 	}],
 	[['.try', ',block', [_('param', atom)], ',handler'], function(form){
 		var $block = trivial(this.block);
@@ -163,7 +167,7 @@ var re = syntax_rule(
 	[empty, function(form, env, k){ return k(['.unit']) }],
 	// Deferred nodes
 	[['&!', ',x'], function(form, env, k){
-		var t = newt();
+		var t = env.newt();
 		return re(this.x, env, function(x){
 			return ['.begin',
 				['.set', env.tStep, ['.lambda', [t], k(t)]],
@@ -191,8 +195,8 @@ var re = syntax_rule(
 	}],
 	[['&', ['.if', ',test', ',consequent', ',alternate']], function(form, env, k){
 		var $test = this.test, $consequent = this.consequent, $alternate = this.alternate;
-		var t = newt();
-		var tx = newt();
+		var t = env.newt();
+		var tx = env.newt();
 		return ['.begin', 
 			['.set', t, ['lambda', [tx], k(tx)]], 
 			ra($test, env, function(c){
@@ -205,10 +209,10 @@ var re = syntax_rule(
 	}],
 	[['&', ['.while', ',test', ',body']], function(form, env, k){
 		var $test = this.test, $body = this.body;
-		var t = newt();
-		var tr = newt();
-		var tx = newt();
-		var trx = newt();
+		var t = env.newt();
+		var tr = env.newt();
+		var tx = env.newt();
+		var trx = env.newt();
 		return ['.begin', 
 			['.set', t, ['.lambda', [tx], k(tx)]], 
 			['.set', tr, ['.lambda', [trx], ra($test, env, function(c){
@@ -223,8 +227,8 @@ var re = syntax_rule(
 	[['&', ['.try', ',block', [',param'], ',handler']], function(form, env, k){
 		var $block = this.block, $param = this.param, $handler = this.handler;
 		env.declare($param);
-		var t = newt(), tx = newt(), te = newt();
-		var b = newt();
+		var t = env.newt(), tx = env.newt(), te = env.newt();
+		var b = env.newt();
 		return ['.begin',
 			['.set', t, ['.lambda', [tx], 
 				['.begin', ['.set', env.tCatch, b], k(tx)]]],
@@ -244,11 +248,7 @@ var re = syntax_rule(
 	}],
 	// Flow controls, Plain
 	[['&', ['.return', ',x']], ['.return', ',x'], function(form, env, k){
-		if(env.isGenerator){
-			return re(this.x, env, GEN_FINISH)
-		} else {
-			return re(this.x, env, RET)
-		}
+		return re(this.x, env, env.exitK)
 	}],
 	[['&', ['.throw', ',x']], ['.throw', ',x'], function(form, env, k){
 		if(env.isGenerator){
@@ -271,7 +271,7 @@ var re = syntax_rule(
 	[['.if', ',cond', ',consequent'], function(form, env, k){
 		var $consequent = this.consequent;
 		return re(this.cond, env, function(c){
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', ['.if', c, re($consequent, env, function(x){ return ['.set', t, x] })], k(t)]
 		});
 	}],
@@ -279,7 +279,7 @@ var re = syntax_rule(
 		var $consequent = this.consequent;
 		var $alternate = this.alternate;
 		return re(this.cond, env, function(c){
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', ['.if', c, 
 				re($consequent, env, function(x){ return ['.set', t, x] }),
 				re($alternate, env, function(x){ return ['.set', t, x] })
@@ -290,7 +290,7 @@ var re = syntax_rule(
 		var $cond = this.cond;
 		var $body = this.body;
 		return ra($cond, env, function(c){
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', ['.while', c, re($body, env, function(x){
 				return ['.begin', ['.set', t, x], re($cond, env, function(x){ return ['.set', c, x] })]
 			})], k(t)]
@@ -301,26 +301,28 @@ var re = syntax_rule(
 		var $param = this.param;
 		var $handler = this.handler;
 		env.declare($param);
-		var t = newt();
+		var t = env.newt();
 		return ['.begin', ['.try', re($block, env, function(x){ return ['.set', t, x] }), [env.use($param)],
 			re($handler, env, function(x){ return ['.set', t, x] })], k(t)];
 	}],
-	// Trivial Expressions
+	// Lambdas and Betas
 	[	['.trivial', ['.lambda', ',args', ',body']], 
 		['.lambda', ',args', ',body'],
 		function(form, env, k){ 
 			var derived = new Scope(env);
-			for(var j = 0; j < this.args.length; j++){
-				derived.declare(this.args[j], true);
-			}
+			var args = this.args.map(function(arg){ 
+				derived.declare(arg, true);
+				return re(arg, derived, id)
+			});
 			var b = this.body;
-			if(b instanceof Array && (b[0] === '&' || b[0] === '&!')) {
+			if(isDelaied(b)) {
 				derived.isGenerator = true;
-				derived.tStep = newt();
-				derived.tNext = newt();
-				derived.tCatch = newt();
-				return k(['.lambda', this.args, ['.begin', 
-					['.set', derived.tStep, ['.lambda', [], re(b, derived, GEN_FINISH)]],
+				derived.tStep = derived.newt();
+				derived.tNext = derived.newt();
+				derived.tCatch = derived.newt();
+				derived.exitK = GEN_FINISH;
+				return k(['.lambda', args, ['.begin', 
+					['.set', derived.tStep, ['.lambda', [], re(b, derived, derived.exitK)]],
 					['.set', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], ['ex'], ['.return', [derived.tCatch, 'ex']]]]],
 					['.set', derived.tCatch, ['.lambda', ['e'], ['.throw', 'e']]],
 					['.return', ['.hash',
@@ -329,9 +331,87 @@ var re = syntax_rule(
 					]]
 				], derived])
 			} else {
-				return k(['.lambda', this.args, re(b, derived, RET), derived])
+				derived.exitK = RET;
+				return k(['.lambda', this.args, re(b, derived, derived.exitK), derived])
 			}
 		}],
+	[['.beta', ',args', ',body', ',..params'], function(form, env, k){
+		// Note: .beta is designed for [let] construction in most functional
+		// languages. It does NOT change the semantics of [return]. Therefore
+		// we need a tagging system to ensure that normal exit differs from
+		// returning.
+		var $params = this.params, $body = this.body, $args = this.args;
+		return re$($params, env, function(params){
+			var derived = new Scope(env);
+			var args = $args.map(function(arg){ 
+				derived.declare(arg, true);
+				return re(arg, derived, id)
+			});
+			var returnUsed = false;
+			derived.exitK = function(x){
+				returnUsed = true;
+				return ['.begin',
+					['.set', tag, ['.quote', true]],
+					['.set', t, x],
+					['.return', t]
+				]
+			};
+			var t = env.newt();
+			var tag = env.newt('tag');
+
+			var normalExitReturns = [];
+
+			var b = re($body, derived, function(x){ 
+				var retex = ['.return', ['.set', t, x]];
+				normalExitReturns.push(retex);
+				return retex;
+			});
+			if(returnUsed){
+				return ['.begin',
+					['.set', tag, ['.quote', false]],
+					[['.lambda', args, b, derived]].concat(params),
+					['.if', tag, env.exitK(t), k(t)]
+				]	
+			} else {
+				for(var j = 0; j < normalExitReturns.length; j++){
+					normalExitReturns[j][1] = normalExitReturns[j][1][2]
+				}
+				return k([['.lambda', args, b, derived]].concat(params))
+			}
+		})
+	}],
+	[['&', ['.beta', ',args', ',body', ',..params']], function(form, env, k){
+		var $params = this.params, $body = this.body, $args = this.args;
+		if(!isDelaied($body)) return re(['.beta', $args, $body].concat($params));
+		return re$($params, env, function(params){
+			// Body is delaied
+			var derived = new Scope(env);
+			derived.isGenerator = true;
+			derived.tStep = derived.newt();
+			derived.tNext = derived.newt();
+			derived.tCatch = derived.newt();
+			var args = $args.map(function(arg){ 
+				derived.declare(arg, true);
+				return re(arg, derived, id)
+			});
+			var tExit = derived.newt();
+			var tx = derived.newt();
+			derived.exitK = function(x){ return ['.return', [tExit, x]] };
+
+			var tNorm = derived.newt();
+			var tnx = derived.newt();
+
+			return [['.lambda', $args, ['.begin', 
+				['.set', tExit, ['.lambda', [tx], env.exitK(tx)]],
+				['.set', tNorm, ['.lambda', [tnx], k(tnx)]],
+				['.set', derived.tStep, ['.lambda', [], re($body, derived, function(x){ return ['.return', [tNorm, x]] })]],
+				['.set', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], ['ex'], ['.return', [derived.tCatch, 'ex']]]]],
+				['.set', derived.tCatch, env.tCatch],
+				['.return', [derived.tNext]]
+			], derived]].concat(params)
+		})
+	}],
+
 	[	['.trivial', _('x', atom)],
 		_('x', atom),
 		function(form, env, k){
@@ -399,7 +479,7 @@ var re = syntax_rule(
 			var $left = this.left, $right = this.right, $args = this.args;
 			return ra($left, env, function(xl){
 				return re($right, env, function(xr){
-					var t = newt();
+					var t = env.newt();
 					return ['.begin', ['.set', t, ['.', xl, xr]], re$($args, env, function(x$){
 						if(x$) return k([['.', t, ['.quote', 'call']], xl].concat(x$))
 						else return k([['.', t, ['.quote', 'call']], xl])
@@ -425,8 +505,8 @@ var re = syntax_rule(
 	[['&', ['&&', ',x', ',..rest']], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			var t = newt();
-			var tx = newt();
+			var t = env.newt();
+			var tx = env.newt();
 			return ['.begin', 
 				['.set', t, ['.lambda', [tx], k(tx)]],
 				['.if', x, re(['&', ['&&'].concat($rest)], env, function(x){ return ['.return', [t, x]] }), ['.return', [t, x]]]
@@ -438,8 +518,8 @@ var re = syntax_rule(
 	[['&', ['||', ',x', ',..rest']], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			var t = newt();
-			var tx = newt();
+			var t = env.newt();
+			var tx = env.newt();
 			return ['.begin', 
 				['.set', t, ['.lambda', [tx], k(tx)]],
 				['.if', x, ['.return', [t, x]], re(['&', ['||'].concat($rest)], env, function(x){ return ['.return', [t, x]] })]
@@ -451,7 +531,7 @@ var re = syntax_rule(
 	[['&&', ',x', ',..rest'], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', 
 				['.if', x, re(['&', ['&&'].concat($rest)], env, function(x){ return ['.set', t, x] }), ['.set', t, x]],
 				k(t)
@@ -463,7 +543,7 @@ var re = syntax_rule(
 	[['||', ',x', ',..rest'], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', 
 				['.if', x, ['.set', t, x], re(['&', ['||'].concat($rest)], env, function(x){ return ['.set', t, x] })],
 				k(t),
@@ -498,7 +578,7 @@ function ra(form, env, k){
 		if(typeof x === 'string' && x[0] === '_'){
 			return k(x)
 		} else {
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', ['.set', t, x], k(t)]
 		}
 	})
@@ -543,5 +623,6 @@ function mb(form){
 
 exports.pass = function(form, externScope){
 	var globalScope = new Scope(externScope);
+	globalScope.exitK = id;
 	return mb(rs(trivial(form), globalScope, id))
 }

@@ -8,6 +8,8 @@ var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
 var ref = require('../commons/match.js').ref;
 
+var resolveIdentifier = require('../commons/scope.js').resolveIdentifier
+
 var util = require('util');
 
 function tb(form){
@@ -123,18 +125,25 @@ var te = syntax_rule(
 	[['.lambda', ',args', ',body', ',scope'], function(form){
 		var body = tb(this.body);
 		var s = this.scope;
-		var locals = s.locals;
+		var locals = s.locals.map(function(id){
+			return {
+				type: "VariableDeclarator",
+				id: {type: "Identifier", name: s.castName(id)},
+				init: null
+			}
+		});
+		locals = locals.concat(s.temps.map(function(id){
+			return {
+				type: "VariableDeclarator",
+				id: {type: "Identifier", name: s.castTempName(id)},
+				init: null
+			}			
+		}));
 		if(locals.length){
 			body.body.unshift({
 				type: "VariableDeclaration",
 				kind: "var",
-				declarations: locals.map(function(id){
-					return {
-						type: "VariableDeclarator",
-						id: {type: "Identifier", name: s.castName(id)},
-						init: null
-					}
-				})
+				declarations: locals
 			});
 		}
 		return {
@@ -146,6 +155,8 @@ var te = syntax_rule(
 		}
 	}],
 	[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
+	[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: this.scope.castTempName(this.id) }}],
+	[['.id', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope) }}],
 	[['.', ',left', ',right'], function(form){
 		return {
 			type: 'MemberExpression',
@@ -207,7 +218,6 @@ var te = syntax_rule(
 			arguments: this.args.map(te)
 		}
 	}],
-	[ref, function(form){ return { type: 'Identifier', name: form.resolve() } }],
 	[atom, function(form){ return { type: 'Identifier', name: form } }],
 	[any, function(form){
 		throw new Error('Unknown node type ' + form)

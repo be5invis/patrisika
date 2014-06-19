@@ -1,1 +1,0 @@
-[.lambda [] [f [.yield g] [.yield h]]]
