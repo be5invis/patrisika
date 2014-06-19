@@ -17,12 +17,18 @@ var Scope = function(parent){
 		} else {
 			this.declarations = new Hash();
 		}
+		if(parent.macros) {
+			this.macros = Object.create(parent.macros)
+		} else {
+			this.macros = new Hash();
+		}
 		Object.defineProperty(this, 'parent', {
 			value: parent, 
 			enumerable: false
-		})
+		});
 	} else {
 		this.declarations = new Hash();
+		this.macros = new Hash();
 	}
 	this.N = (++N);
 	this.uses = new Hash();

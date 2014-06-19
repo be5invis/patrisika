@@ -1,3 +1,6 @@
+// PATRISIKA: Scoping and macro expansion.
+
+
 var syntax_rule = require('../commons/match.js').syntax_rule;
 var _ = require('../commons/match.js')._;
 var atom = require('../commons/match.js').atom;
@@ -7,7 +10,7 @@ var prim = require('../commons/match.js').prim;
 
 var Scope = require('../commons/scope.js').Scope;
 
-var scoping = syntax_rule(
+var ex = syntax_rule(
 	[['.lambda', ',args', ',body'], function(form, env){
 		var derived = new Scope(env);
 		var args = [];
@@ -15,7 +18,7 @@ var scoping = syntax_rule(
 			derived.declare(this.args[j], true)
 			args[j] = derived.use(this.args[j]);
 		}
-		return ['.lambda', args, scoping(this.body, derived), derived]
+		return ['.lambda', args, ex(this.body, derived), derived]
 	}],
 	[['.beta', ',args', ',body', ',..params'], function(form, env){
 		var derived = new Scope(env);
@@ -25,26 +28,33 @@ var scoping = syntax_rule(
 			args[j] = derived.use(this.args[j]);
 		};
 		for(var j = 0; j < this.params.length; j++){
-			params[j] = scoping(this.params[j], env)
+			params[j] = ex(this.params[j], env)
 		}
-		return ['.beta', args, scoping(this.body, derived), derived].concat(params)
+		return ['.beta', args, ex(this.body, derived), derived].concat(params)
 	}],
 	[['.try', ',block', [_('param', atom)], ',handler'], function(form, env){
 		env.declare(this.param);
-		return ['.try', scoping(this.block, env), env.use(this.param), scoping(this.handler, env)]
+		return ['.try', ex(this.block, env), env.use(this.param), ex(this.handler, env)]
 	}],
 	[['.hash', ',..args'], function(form, env){
 		var a = ['.hash'];
 		for(var j = 1; j < form.length; j++){
-			a[j] = [form[j][0], scoping(form[j][1], env)];
+			a[j] = [form[j][0], ex(form[j][1], env)];
 		};
 		return a;
 	}],
+	[['.local', _('x', atom)], function(form, env){
+		env.declare(this.x);
+		return this.x;
+	}],
 	[[',..call'], function(form, env){
+		if(atom(form[0]) && env.macros.has(form[0])){
+			return env.macros.get(form[0])(ex, form, env)
+		}
 		var j0 = prim(form[0]) ? 1 : 0;
 		var a = form.slice(0);
 		for(var j = j0; j < form.length; j++){
-			a[j] = scoping(form[j], env)
+			a[j] = ex(form[j], env)
 		}
 		return a;
 	}],
@@ -56,5 +66,5 @@ var scoping = syntax_rule(
 )
 
 exports.pass = function(form, globalScope){
-	return scoping(form, globalScope);
+	return ex(form, globalScope);
 }
