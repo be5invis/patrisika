@@ -10,7 +10,6 @@ var atom = require('../commons/match.js').atom;
 var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
 var prim = require('../commons/match.js').prim;
-var ref = require('../commons/match.js').ref;
 
 var Scope = require('../commons/scope.js').Scope;
 
@@ -18,13 +17,6 @@ function isDelaied(form) {
 	return form instanceof Array && (form[0] === '&' || form[0] === '&!')
 }
 
-
-var newt = function(){
-	var n = 0;
-	return function(){
-		return '_t' + (++n);
-	};
-}();
 
 function RET(x){ return ['.return', x] };
 function GEN_FINISH(x){ return ['.return', ['.hash', ['done', ['.quote', true]], ['value', x]]] };
@@ -163,7 +155,7 @@ var re = syntax_rule(
 	[empty, function(form, env, k){ return k(['.unit']) }],
 	// Deferred nodes
 	[['&!', ',x'], function(form, env, k){
-		var t = newt();
+		var t = env.newt();
 		return re(this.x, env, function(x){
 			return ['.begin',
 				['.set', env.tStep, ['.lambda', [t], k(t)]],
@@ -191,8 +183,8 @@ var re = syntax_rule(
 	}],
 	[['&', ['.if', ',test', ',consequent', ',alternate']], function(form, env, k){
 		var $test = this.test, $consequent = this.consequent, $alternate = this.alternate;
-		var t = newt();
-		var tx = newt();
+		var t = env.newt();
+		var tx = env.newt();
 		return ['.begin', 
 			['.set', t, ['lambda', [tx], k(tx)]], 
 			ra($test, env, function(c){
@@ -205,10 +197,10 @@ var re = syntax_rule(
 	}],
 	[['&', ['.while', ',test', ',body']], function(form, env, k){
 		var $test = this.test, $body = this.body;
-		var t = newt();
-		var tr = newt();
-		var tx = newt();
-		var trx = newt();
+		var t = env.newt();
+		var tr = env.newt();
+		var tx = env.newt();
+		var trx = env.newt();
 		return ['.begin', 
 			['.set', t, ['.lambda', [tx], k(tx)]], 
 			['.set', tr, ['.lambda', [trx], ra($test, env, function(c){
@@ -223,8 +215,8 @@ var re = syntax_rule(
 	[['&', ['.try', ',block', [',param'], ',handler']], function(form, env, k){
 		var $block = this.block, $param = this.param, $handler = this.handler;
 		env.declare($param);
-		var t = newt(), tx = newt(), te = newt();
-		var b = newt();
+		var t = env.newt(), tx = env.newt(), te = env.newt();
+		var b = env.newt();
 		return ['.begin',
 			['.set', t, ['.lambda', [tx], 
 				['.begin', ['.set', env.tCatch, b], k(tx)]]],
@@ -271,7 +263,7 @@ var re = syntax_rule(
 	[['.if', ',cond', ',consequent'], function(form, env, k){
 		var $consequent = this.consequent;
 		return re(this.cond, env, function(c){
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', ['.if', c, re($consequent, env, function(x){ return ['.set', t, x] })], k(t)]
 		});
 	}],
@@ -279,7 +271,7 @@ var re = syntax_rule(
 		var $consequent = this.consequent;
 		var $alternate = this.alternate;
 		return re(this.cond, env, function(c){
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', ['.if', c, 
 				re($consequent, env, function(x){ return ['.set', t, x] }),
 				re($alternate, env, function(x){ return ['.set', t, x] })
@@ -290,7 +282,7 @@ var re = syntax_rule(
 		var $cond = this.cond;
 		var $body = this.body;
 		return ra($cond, env, function(c){
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', ['.while', c, re($body, env, function(x){
 				return ['.begin', ['.set', t, x], re($cond, env, function(x){ return ['.set', c, x] })]
 			})], k(t)]
@@ -301,7 +293,7 @@ var re = syntax_rule(
 		var $param = this.param;
 		var $handler = this.handler;
 		env.declare($param);
-		var t = newt();
+		var t = env.newt();
 		return ['.begin', ['.try', re($block, env, function(x){ return ['.set', t, x] }), [env.use($param)],
 			re($handler, env, function(x){ return ['.set', t, x] })], k(t)];
 	}],
@@ -316,9 +308,9 @@ var re = syntax_rule(
 			var b = this.body;
 			if(b instanceof Array && (b[0] === '&' || b[0] === '&!')) {
 				derived.isGenerator = true;
-				derived.tStep = newt();
-				derived.tNext = newt();
-				derived.tCatch = newt();
+				derived.tStep = env.newt();
+				derived.tNext = env.newt();
+				derived.tCatch = env.newt();
 				return k(['.lambda', this.args, ['.begin', 
 					['.set', derived.tStep, ['.lambda', [], re(b, derived, GEN_FINISH)]],
 					['.set', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], ['ex'], ['.return', [derived.tCatch, 'ex']]]]],
@@ -399,7 +391,7 @@ var re = syntax_rule(
 			var $left = this.left, $right = this.right, $args = this.args;
 			return ra($left, env, function(xl){
 				return re($right, env, function(xr){
-					var t = newt();
+					var t = env.newt();
 					return ['.begin', ['.set', t, ['.', xl, xr]], re$($args, env, function(x$){
 						if(x$) return k([['.', t, ['.quote', 'call']], xl].concat(x$))
 						else return k([['.', t, ['.quote', 'call']], xl])
@@ -425,8 +417,8 @@ var re = syntax_rule(
 	[['&', ['&&', ',x', ',..rest']], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			var t = newt();
-			var tx = newt();
+			var t = env.newt();
+			var tx = env.newt();
 			return ['.begin', 
 				['.set', t, ['.lambda', [tx], k(tx)]],
 				['.if', x, re(['&', ['&&'].concat($rest)], env, function(x){ return ['.return', [t, x]] }), ['.return', [t, x]]]
@@ -438,8 +430,8 @@ var re = syntax_rule(
 	[['&', ['||', ',x', ',..rest']], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			var t = newt();
-			var tx = newt();
+			var t = env.newt();
+			var tx = env.newt();
 			return ['.begin', 
 				['.set', t, ['.lambda', [tx], k(tx)]],
 				['.if', x, ['.return', [t, x]], re(['&', ['||'].concat($rest)], env, function(x){ return ['.return', [t, x]] })]
@@ -451,7 +443,7 @@ var re = syntax_rule(
 	[['&&', ',x', ',..rest'], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', 
 				['.if', x, re(['&', ['&&'].concat($rest)], env, function(x){ return ['.set', t, x] }), ['.set', t, x]],
 				k(t)
@@ -463,7 +455,7 @@ var re = syntax_rule(
 	[['||', ',x', ',..rest'], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', 
 				['.if', x, ['.set', t, x], re(['&', ['||'].concat($rest)], env, function(x){ return ['.set', t, x] })],
 				k(t),
@@ -498,7 +490,7 @@ function ra(form, env, k){
 		if(typeof x === 'string' && x[0] === '_'){
 			return k(x)
 		} else {
-			var t = newt();
+			var t = env.newt();
 			return ['.begin', ['.set', t, x], k(t)]
 		}
 	})

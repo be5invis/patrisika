@@ -1,12 +1,4 @@
 var Hash = require('./hash').Hash;
-var Reference = function(scope, name){
-	this.scope = scope;
-	this.name = name;
-}
-Reference.prototype.resolve = function(){
-	this.scope.resolve();
-	return this.scope.uses.get(this.name).belongs.castName(this.name)
-}
 
 var Declaration = function(name, isParameter, belongs){
 	this.name = name;
@@ -36,10 +28,12 @@ var Scope = function(parent){
 	this.uses = new Hash();
 	this.locals = [];
 	this.resolved = false;
+	this.temps = [];
 }
 Scope.prototype.use = function(name) {
-	this.uses.put(name, null)
-	return new Reference(this, name)
+	this.uses.put(name, null);
+	return ['.id', name, this];
+//	return new Reference(this, name)
 }
 Scope.prototype.declare = function(name, isParameter) {
 	var decl = new Declaration(name, isParameter, this)
@@ -63,8 +57,17 @@ Scope.prototype.resolve = function(){
 Scope.prototype.castName = function(name){
 	return 's' + this.N + '_' + name;
 }
+Scope.prototype.castTempName = function(name){
+	return '_s' + this.N + '_' + name;
+}
 Scope.prototype.inspect = function(){ return "[scope #" + this.N + "]" }
+Scope.prototype.newt = function(fn){
+	return ['.t', (this.temps[this.temps.length] = (fn || 't') + this.temps.length), this]
+}
 
-exports.Reference = Reference;
 exports.Declaration = Declaration;
 exports.Scope = Scope;
+exports.resolveIdentifier = function(id, scope){
+	scope.resolve();
+	return scope.uses.get(id).belongs.castName(id);
+}
