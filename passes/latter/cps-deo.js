@@ -404,9 +404,9 @@ var re = syntax_rule(
 			if(!env.tThis) env.tThis = env.newt(); derived.tThis = env.tThis;
 			if(!env.tArgs) env.tArgs = env.newt(); derived.tArgs = env.tArgs;
 			derived.isGenerator = true;
-			derived.tStep = derived.newt();
-			derived.tNext = derived.newt();
-			derived.tCatch = derived.newt();
+			derived.tStep = env.tStep;
+			derived.tNext = env.tNext;
+			derived.tCatch = env.tCatch;
 			var args = $args.map(function(arg){ 
 				derived.declare(arg, true);
 				return re(arg, derived, id)
@@ -418,14 +418,12 @@ var re = syntax_rule(
 			var tNorm = derived.newt();
 			var tnx = derived.newt();
 
-			return [['.lambda', $args, ['.begin', 
+			return ['.return', [['.lambda', args, ['.begin', 
 				['.set', tExit, ['.lambda', [tx], env.exitK(tx)]],
 				['.set', tNorm, ['.lambda', [tnx], k(tnx)]],
 				['.set', derived.tStep, ['.lambda', [], re($body, derived, function(x){ return ['.return', [tNorm, x]] })]],
-				['.set', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], ['ex'], ['.return', [derived.tCatch, 'ex']]]]],
-				['.set', derived.tCatch, env.tCatch],
 				['.return', [derived.tNext]]
-			], derived]].concat(params)
+			], derived]].concat(params)]
 		})
 	}],
 
