@@ -97,19 +97,24 @@ var ts = syntax_rule(
 );
 
 function Binopoid(spiderMonkeyNodeType){
-	return function(operator){
-		return function(){
-			return {
-				type: spiderMonkeyNodeType,
-				left: te(this.left),
-				right: te(this.right),
-				operator: operator
+	return function(operator, jsOperator){
+		return [[operator, ',..items'], function(){
+			if(this.items.length > 1){
+				return this.items.slice(1).reduce(function(left, right){
+					return {
+						type: spiderMonkeyNodeType,
+						left: left,
+						right: te(right),
+						operator: jsOperator || operator
+					}
+				}, te(this.items[0]));
+			} else {
+				return te(this.items[0])
 			}
-		}	
+		}]
 	}
 };
 var binop = Binopoid('BinaryExpression');
-var assop = Binopoid('AssignmentExpression');
 var logop = Binopoid('LogicalExpression');
 
 var te = syntax_rule(
@@ -172,25 +177,36 @@ var te = syntax_rule(
 	[['.unit'], function(form){ 
 		return {type: 'UnaryExpression', operator:'void', prefix: true, argument: {type: 'Literal', value: 0}}
 	}],
-	[['+', ',left', ',right'], binop('+')],
-	[['-', ',left', ',right'], binop('-')],
-	[['*', ',left', ',right'], binop('*')],
-	[['/', ',left', ',right'], binop('/')],
-	[['<', ',left', ',right'], binop('<')],
-	[['>', ',left', ',right'], binop('>')],
-	[['%', ',left', ',right'], binop('%')],
-	[['<=', ',left', ',right'], binop('<=')],
-	[['>=', ',left', ',right'], binop('>=')],
-	[['==', ',left', ',right'], binop('===')],
-	[['!=', ',left', ',right'], binop('!==')],
-	[['=~', ',left', ',right'], binop('==')],
-	[['!~', ',left', ',right'], binop('!=')],
-	[['===', ',left', ',right'], binop('===')],
-	[['!==', ',left', ',right'], binop('!==')],
-	[['.is', ',left', ',right'], binop('instanceof')],
-	[['&&', ',left', ',right'], logop('&&')],
-	[['||', ',left', ',right'], logop('||')],
-	[['.set', ',left', ',right'], assop('=')],
+	[['.thisp'], function(form){
+		return {type: 'ThisExpression'}
+	}],
+	[['.argsp'], function(form){
+		return {type: 'Identifier', name: 'arguments'}
+	}],
+	binop('+'),
+	binop('-'),
+	binop('*'),
+	binop('/'),
+	binop('%'),
+	binop('<'),
+	binop('>'),
+	binop('<='),
+	binop('>='),
+	binop('==', '==='),
+	binop('!=', '!=='),
+	binop('===', '==='),
+	binop('!==', '!=='),
+	binop('.is', 'instanceof'),
+	logop('&&'),
+	logop('||'),
+	[['.set', ',left', ',right'], function(form){
+		return {
+			type: 'AssignmentExpression',
+			left: te(this.left),
+			right: te(this.right),
+			operator: '='
+		}
+	}],
 	[['!', ',argument'], function(form) {
 		return {
 			type: "UnaryExpression",

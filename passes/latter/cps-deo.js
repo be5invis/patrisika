@@ -30,6 +30,9 @@ var trivial = syntax_rule(
 	}],
 	[['.quote', ',x'], function(form){ return ['.trivial', form] }],
 	[['.t', ',x'], function(form){ return ['.trivial', form] }],
+	[['.unit'], function(form){ return ['.trivial', form] }],
+	[['.thisp'], function(form){ return ['.trivial', form] }],
+	[['.argsp'], function(form){ return ['.trivial', form] }],
 	[['.yield', ',x'], function(form){ return ['&!', trivial(this.x)] }],
 	[['.beta', ',args', ',body', ',..params'], function(form){
 		var a = [form[0], form[1]];
@@ -185,7 +188,7 @@ var re = syntax_rule(
 	[['&', ['.begin', ',x', ',..rest']], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			return re(['&', '.begin'].concat($rest), env, function(v){
+			return re(['&', ['.begin'].concat($rest)], env, function(v){
 				return k(v);
 			})
 		})
@@ -321,18 +324,27 @@ var re = syntax_rule(
 				derived.tNext = derived.newt();
 				derived.tCatch = derived.newt();
 				derived.exitK = GEN_FINISH;
+			} else {
+				derived.exitK = RET;			
+			}
+			var body = re(b, derived, derived.exitK)
+			if(derived.tThis){
+				body = ['.begin', ['.set', derived.tThis, ['.thisp']], body];
+			}
+			if(derived.tArgs){
+				body = ['.begin', ['.set', derived.tThis, ['.argsp']], body];
+			}
+			if(derived.isGenerator){
 				return k(['.lambda', args, ['.begin', 
-					['.set', derived.tStep, ['.lambda', [], re(b, derived, derived.exitK)]],
+					['.set', derived.tStep, ['.lambda', [], body]],
 					['.set', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], ['ex'], ['.return', [derived.tCatch, 'ex']]]]],
 					['.set', derived.tCatch, ['.lambda', ['e'], ['.throw', 'e']]],
-					['.return', ['.hash',
-						['next', derived.tNext],
-						['throw', derived.tCatch]
-					]]
+					['.set', ['.', ['.thisp'], ['.quote', 'next']], derived.tNext],
+					['.set', ['.', ['.thisp'], ['.quote', 'throw']], derived.tCatch],
+					['.return', ['.thisp']]
 				], derived])
 			} else {
-				derived.exitK = RET;
-				return k(['.lambda', this.args, re(b, derived, derived.exitK), derived])
+				return k(['.lambda', this.args, body, derived])
 			}
 		}],
 	[['.beta', ',args', ',body', ',..params'], function(form, env, k){
@@ -343,6 +355,9 @@ var re = syntax_rule(
 		var $params = this.params, $body = this.body, $args = this.args;
 		return re$($params, env, function(params){
 			var derived = new Scope(env);
+			// always generates tThis and tArgs
+			if(!env.tThis) env.tThis = env.newt(); derived.tThis = env.tThis;
+			if(!env.tArgs) env.tArgs = env.newt(); derived.tArgs = env.tArgs;
 			var args = $args.map(function(arg){ 
 				derived.declare(arg, true);
 				return re(arg, derived, id)
@@ -386,6 +401,8 @@ var re = syntax_rule(
 		return re$($params, env, function(params){
 			// Body is delaied
 			var derived = new Scope(env);
+			if(!env.tThis) env.tThis = env.newt(); derived.tThis = env.tThis;
+			if(!env.tArgs) env.tArgs = env.newt(); derived.tArgs = env.tArgs;
 			derived.isGenerator = true;
 			derived.tStep = derived.newt();
 			derived.tNext = derived.newt();
@@ -427,6 +444,14 @@ var re = syntax_rule(
 			env.declare(this.x); 
 			return k(env.use(this.x))
 		}],
+	[['.trivial', ['.thisp']], ['.thisp'], function(form, env, k){ 
+		if(!env.tThis) env.tThis = env.newt()
+		return k(env.tThis)
+	}],
+	[['.trivial', ['.argsp']], ['.argsp'], function(form, env, k){ 
+		if(!env.tArgs) env.tArgs = env.newt()
+		return k(env.tArgs)
+	}],
 	[	['.trivial', ['.unit']],
 		['.unit'], function(form, env, k){ return k(form) }],
 	[['.trivial', [_('operator', prim), ',..args']], function(form, env, k){
@@ -443,8 +468,7 @@ var re = syntax_rule(
 			})
 		})
 	}],
-	[['.quote', ',x'], function(form, env, k){ return k(form) }],
-	[['.unit'], function(form, env, k){ return k(form) }],
+
 	[['.trivial', ',x'], function(form, env, k){ return k(this.x) }],
 
 	// Other Expressions
@@ -469,7 +493,7 @@ var re = syntax_rule(
 		['.set', ',left', ',right'], 
 		function (form, env, k){
 			var $left = this.left, $right = this.right;
-			return re($right, env, function(e){ return k(['.set', $left, e]) })
+			return re($right, env, function(e){ return k(['.set', re($left, env, id), e]) })
 		}],
 	[	['&', [['.', ',left', ',right'], ',..args']],
 		['&', [['.trivial', ['.', ',left', ',right']], ',..args']],

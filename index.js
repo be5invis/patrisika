@@ -34,6 +34,7 @@ exports.defaultExterns = function(externs){
 	externs.declare('RegExp')
 	externs.declare('Function')
 	externs.declare('alert')
+	externs.declare('console')
 
 	return externs;
 }(new Scope());
