@@ -239,11 +239,9 @@ var re = syntax_rule(
 			['.set', env.tStep, ['.lambda', [], re($block, env, function(x){ return ['.return', [t, x]]})]],
 			['.set', env.tCatch, ['.lambda', [te], ['.begin',
 				['.set', env.use($param), te],
+				['.set', env.tCatch, b],
 				re($handler, env, function(x){
-					return ['.begin',
-						['.set', env.tCatch, b],
-						['.return', [t, x]]
-					]
+					return ['.return', [t, x]]
 				})
 			]]],
 			['.return', [env.tNext]]
