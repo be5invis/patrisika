@@ -35,6 +35,7 @@ exports.defaultExterns = function(externs){
 	externs.declare('Function')
 	externs.declare('alert')
 	externs.declare('console')
+	externs.declare('setInterval')
 
 	return externs;
 }(new Scope());
