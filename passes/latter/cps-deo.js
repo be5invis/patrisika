@@ -188,7 +188,7 @@ var re = syntax_rule(
 	[['&', ['.begin', ',x', ',..rest']], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			return re(['&', '.begin'].concat($rest), env, function(v){
+			return re(['&', ['.begin'].concat($rest)], env, function(v){
 				return k(v);
 			})
 		})
@@ -339,10 +339,9 @@ var re = syntax_rule(
 					['.set', derived.tStep, ['.lambda', [], body]],
 					['.set', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], ['ex'], ['.return', [derived.tCatch, 'ex']]]]],
 					['.set', derived.tCatch, ['.lambda', ['e'], ['.throw', 'e']]],
-					['.return', ['.hash',
-						['next', derived.tNext],
-						['throw', derived.tCatch]
-					]]
+					['.set', ['.', ['.thisp'], ['.quote', 'next']], derived.tNext],
+					['.set', ['.', ['.thisp'], ['.quote', 'throw']], derived.tCatch],
+					['.return', ['.thisp']]
 				], derived])
 			} else {
 				return k(['.lambda', this.args, body, derived])
@@ -494,7 +493,7 @@ var re = syntax_rule(
 		['.set', ',left', ',right'], 
 		function (form, env, k){
 			var $left = this.left, $right = this.right;
-			return re($right, env, function(e){ return k(['.set', $left, e]) })
+			return re($right, env, function(e){ return k(['.set', re($left, env, id), e]) })
 		}],
 	[	['&', [['.', ',left', ',right'], ',..args']],
 		['&', [['.trivial', ['.', ',left', ',right']], ',..args']],
