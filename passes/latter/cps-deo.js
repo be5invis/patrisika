@@ -671,8 +671,7 @@ function mb(form){
 	}
 }
 
-exports.pass = function(form, externScope){
-	var globalScope = new Scope(externScope);
-	globalScope.exitK = id;
-	return mb(rs(trivial(form), globalScope, id))
+exports.pass = function(form, globals){
+	globals.exitK = id;
+	return mb(rs(trivial(form), globals, id))
 }

@@ -8,7 +8,7 @@ var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
 var ref = require('../commons/match.js').ref;
 
-var resolveIdentifier = require('../commons/scope.js').resolveIdentifier
+var resolveIdentifier = require('patrisika-scopes').resolveIdentifier
 
 var util = require('util');
 
@@ -253,4 +253,8 @@ var te = syntax_rule(
 	}]
 );
 
-exports.pass = ts;
+exports.pass = function(form, globals){
+	var s = te(['.lambda.scoped', [], form, globals]).body;
+
+	return s;
+};

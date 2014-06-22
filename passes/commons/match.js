@@ -1,5 +1,3 @@
-var Reference = require('./scope').Reference
-
 function Slot(id, subpattern){
 	this.id = id;
 	this.subpattern = subpattern;
@@ -74,6 +72,7 @@ var syntax_rule = function(){
 exports.syntax_rule = syntax_rule;
 exports._ = _;
 exports.atom = function(x){ return typeof x === 'string' }
+exports.variable = function(x){ return typeof x === 'string' || (x instanceof Array && (x[0] === '.id' || x[0] === '.t')) }
 exports.empty = function(x){ return !x }
 exports.any = function(x){ return true }
 exports.prim = function(x){ return exports.atom(x) && (x === '.list' || x === '.new' || /^\W+$/.test(x) ) && x != '&' && x != '&!' }

@@ -4,9 +4,9 @@ var deo = require('./passes/latter/cps-deo').pass;
 var cdg = require('./passes/latter/codegen').pass;
 
 exports.generate = function(ast, externs){
-	//var globals = new Scope(externs);
-	var r = deo(ast, externs);
-	return cdg(r)
+	var globals = new Scope(externs);
+	var r = deo(ast, globals);
+	return cdg(r, globals)
 }
 exports.defaultExterns = function(externs){
 	externs.castName = function(name){ return name };
