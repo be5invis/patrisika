@@ -75,4 +75,4 @@ exports.atom = function(x){ return typeof x === 'string' }
 exports.variable = function(x){ return typeof x === 'string' || (x instanceof Array && (x[0] === '.id' || x[0] === '.t')) }
 exports.empty = function(x){ return !x }
 exports.any = function(x){ return true }
-exports.prim = function(x){ return exports.atom(x) && (x === '.list' || x === '.new' || /^\W+$/.test(x) ) && x != '&' && x != '&!' }
+exports.prim = function(x){ return exports.atom(x) && (x[0] === '.' || /^\W+$/.test(x) ) && x != '&' && x != '&!' }

@@ -161,7 +161,9 @@ var te = syntax_rule(
 	}],
 	[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
 	[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: this.scope.castTempName(this.id) }}],
-	[['.id', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope) }}],
+	[['.id', ',id', ',scope'], function(form){ 
+		return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope)} 
+	}],
 	[['.', ',left', ',right'], function(form){
 		return {
 			type: 'MemberExpression',

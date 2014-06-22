@@ -17,7 +17,7 @@ function isDelaied(form) {
 	return form instanceof Array && (form[0] === '&' || form[0] === '&!')
 }
 
-
+function RET(x){ return ['.return', x] }
 function KEY(x){ return x[0] };
 function VAL(x){ return x[1] };
 
@@ -27,7 +27,7 @@ var trivial = syntax_rule(
 		return ['.trivial', ['.lambda', this.args, trivial(this.body)]]
 	}],
 	[['.lambda.scoped', [',..args'], ',body', ',scope'], function(form){
-		return ['.trivial', ['.lambda', this.args, trivial(this.body), this.scope]]
+		return ['.trivial', ['.lambda.scoped', this.args, trivial(this.body), this.scope]]
 	}],
 	[['.quote', ',x'], function(form){ return ['.trivial', form] }],
 	[['.t', ',name'], function(form){ return ['.trivial', form] }],
@@ -279,9 +279,7 @@ var re = syntax_rule(
 	[['.begin', ',x', ',..rest'], function(form, env, k){
 		var $x = this.x, $rest = this.rest;
 		return rs($x, env, function(s){
-			return ['.begin', s, re(['.begin'].concat($rest), env, function(rest){
-				return k(rest)
-			})]
+			return ['.begin', s, re(['.begin'].concat($rest), env, k)]
 		})
 	}],
 //	[['.begin', ',..args'], function(form, env, k){ return re$b(this.args, env, k) }],
@@ -289,7 +287,11 @@ var re = syntax_rule(
 		var $consequent = this.consequent;
 		return re(this.cond, env, function(c){
 			var t = env.newt();
-			return ['.begin', ['.if', c, re($consequent, env, function(x){ return ['.set', t, x] })], k(t)]
+			if(k === RET){
+				return ['.if', c, re($consequent, env, k), k(['.unit'])]
+			} else {
+				return ['.begin', ['.if', c, re($consequent, env, function(x){ return ['.set', t, x] })], k(t)]
+			}
 		});
 	}],
 	[['.if', ',cond', ',consequent', ',alternate'], function(form, env, k){
@@ -297,10 +299,14 @@ var re = syntax_rule(
 		var $alternate = this.alternate;
 		return re(this.cond, env, function(c){
 			var t = env.newt();
-			return ['.begin', ['.if', c, 
-				re($consequent, env, function(x){ return ['.set', t, x] }),
-				re($alternate, env, function(x){ return ['.set', t, x] })
-			], k(t)]
+			if(k === RET){
+				return ['.if', c, re($consequent, env, k), re($alternate, env, k)]
+			} else {			
+				return ['.begin', ['.if', c, 
+					re($consequent, env, function(x){ return ['.set', t, x] }),
+					re($alternate, env, function(x){ return ['.set', t, x] })
+				], k(t)]
+			}
 		});
 	}],
 	[['.while', ',cond', ',body'], function(form, env, k){
@@ -328,7 +334,7 @@ var re = syntax_rule(
 		function(form, env, k){
 			var derived = this.scope; derived.semiparent = env;
 			var args = this.args.map(function(arg){ 
-				derived.declare(arg, true);
+				if(atom(arg)) derived.declare(arg, true);
 				return re(arg, derived, id)
 			});
 			var b = this.body;
@@ -345,7 +351,7 @@ var re = syntax_rule(
 							['value', x]]]]
 				};
 			} else {
-				derived.exitK = function(x){ return ['.return', x] };
+				derived.exitK = RET;
 			}
 			var body = re(b, derived, derived.exitK)
 			if(derived.tThis){
@@ -387,7 +393,7 @@ var re = syntax_rule(
 			if(!env.tThis) env.tThis = env.newt(); derived.tThis = env.tThis;
 			if(!env.tArgs) env.tArgs = env.newt(); derived.tArgs = env.tArgs;
 			var args = $args.map(function(arg){ 
-				derived.declare(arg, true);
+				if(atom(arg)) derived.declare(arg, true);
 				return re(arg, derived, id)
 			});
 			var returnUsed = false;
@@ -436,7 +442,7 @@ var re = syntax_rule(
 			derived.tNext = env.tNext;
 			derived.tCatch = env.tCatch;
 			var args = $args.map(function(arg){ 
-				derived.declare(arg, true);
+				if(atom(arg)) derived.declare(arg, true);
 				return re(arg, derived, id)
 			});
 			var tExit = derived.newt();
@@ -461,7 +467,11 @@ var re = syntax_rule(
 			return k(env.use(this.x))
 		}],
 	[	['.trivial', ['.quote', ',x']],
-		['.quote', ',x'], function(form, env, k){ return k(form) }],
+		['.quote', ',x'],
+		['.trivial', ['.id', ',..x']],
+		['.id', ',..x'],
+		['.trivial', ['.t', ',..x']],
+		['.t', ',..x'], function(form, env, k){ return k(form) }],
 	[	['.trivial', ['.local', ['.trivial', _('x', atom)]]],
 		['.trivial', ['.local', _('x', atom)]],
 		['.local', ['.trivial', _('x', atom)]],
