@@ -8,7 +8,7 @@ var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
 var ref = require('../commons/match.js').ref;
 
-var resolveIdentifier = require('../commons/scope.js').resolveIdentifier
+var resolveIdentifier = require('patrisika-scopes').resolveIdentifier
 
 var util = require('util');
 
@@ -127,7 +127,7 @@ var te = syntax_rule(
 			generator: false
 		}
 	}],
-	[['.lambda', ',args', ',body', ',scope'], function(form){
+	[['.lambda.scoped', ',args', ',body', ',scope'], function(form){
 		var body = tb(this.body);
 		var s = this.scope;
 		var locals = s.locals.map(function(id){
@@ -161,7 +161,9 @@ var te = syntax_rule(
 	}],
 	[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
 	[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: this.scope.castTempName(this.id) }}],
-	[['.id', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope) }}],
+	[['.id', ',id', ',scope'], function(form){ 
+		return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope)} 
+	}],
 	[['.', ',left', ',right'], function(form){
 		return {
 			type: 'MemberExpression',
@@ -227,6 +229,19 @@ var te = syntax_rule(
 			})
 		}
 	}],
+	[['.list', ',..args'], function(form){
+		return {
+			type: "ArrayExpression",
+			elements: this.args.map(te)
+		}
+	}],
+	[['.new', ',callee', ',..args'], function(form){
+		return {
+			type: "NewExpression",
+			callee: te(this.callee),
+			arguments: this.args.map(te)
+		}
+	}],
 	[[',callee', ',..args'], function(form){
 		return {
 			type: 'CallExpression',
@@ -240,4 +255,8 @@ var te = syntax_rule(
 	}]
 );
 
-exports.pass = ts;
+exports.pass = function(form, globals){
+	var s = te(['.lambda.scoped', [], form, globals]).body;
+
+	return s;
+};
