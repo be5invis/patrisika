@@ -30,7 +30,9 @@ var trivial = syntax_rule(
 		return ['.trivial', ['.lambda', this.args, trivial(this.body), this.scope]]
 	}],
 	[['.quote', ',x'], function(form){ return ['.trivial', form] }],
-	[['.t', ',x'], function(form){ return ['.trivial', form] }],
+	[['.t', ',name'], function(form){ return ['.trivial', form] }],
+	[['.id', ',name', ',scope'], function(form){ return ['.trivial', form] }],
+	[['.t', ',name', ',scope'], function(form){ return ['.trivial', form] }],
 	[['.unit'], function(form){ return ['.trivial', form] }],
 	[['.thisp'], function(form){ return ['.trivial', form] }],
 	[['.argsp'], function(form){ return ['.trivial', form] }],
@@ -623,7 +625,7 @@ var re = syntax_rule(
 
 function ra(form, env, k){
 	return re(form, env, function(x){
-		if(typeof x === 'string' && x[0] === '_'){
+		if(x instanceof Array && x[0] === '.t'){
 			return k(x)
 		} else {
 			var t = env.newt();
