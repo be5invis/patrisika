@@ -11,7 +11,7 @@ var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
 var prim = require('../commons/match.js').prim;
 
-var Scope = require('../commons/scope.js').Scope;
+var Scope = require('patrisika-scopes').Scope;
 
 function isDelaied(form) {
 	return form instanceof Array && (form[0] === '&' || form[0] === '&!')
@@ -23,8 +23,11 @@ function VAL(x){ return x[1] };
 
 // Optimization: Find out all trivial subforms.
 var trivial = syntax_rule(
-	[['.lambda', ',args', ',body'], function(form){
+	[['.lambda', [',..args'], ',body'], function(form){
 		return ['.trivial', ['.lambda', this.args, trivial(this.body)]]
+	}],
+	[['.lambda.scoped', [',..args'], ',body', ',scope'], function(form){
+		return ['.trivial', ['.lambda', this.args, trivial(this.body), this.scope]]
 	}],
 	[['.quote', ',x'], function(form){ return ['.trivial', form] }],
 	[['.t', ',x'], function(form){ return ['.trivial', form] }],
@@ -33,11 +36,24 @@ var trivial = syntax_rule(
 	[['.argsp'], function(form){ return ['.trivial', form] }],
 	[['.yield', ',x'], function(form){ return ['&!', trivial(this.x)] }],
 	[['.beta', ',args', ',body', ',..params'], function(form){
-		var a = [form[0], form[1]];
+		var a = ['.beta', this.args];
 		for(var j = 2; j < form.length; j++){
 			a[j] = trivial(form[j])
 		};
 		for(var j = 2; j < a.length; j++){
+			if(isDelaied(a[j])) {
+				return ['&', a];
+			}
+		};
+		return a;
+	}],
+	[['.beta.scoped', ',args', ',body', ',scope', ',..params'], function(form){
+		var a = ['.beta.scoped', this.args, trivial(this.body)];
+		for(var j = 4; j < form.length; j++){
+			a[j] = trivial(form[j])
+		};
+		if(isDelaied(a[2])) return ['&', a]
+		for(var j = 4; j < a.length; j++){
 			if(isDelaied(a[j])) {
 				return ['&', a];
 			}
@@ -305,10 +321,10 @@ var re = syntax_rule(
 			re($handler, env, function(x){ return ['.set', t, x] })], k(t)];
 	}],
 	// Lambdas and Betas
-	[	['.trivial', ['.lambda', ',args', ',body']], 
-		['.lambda', ',args', ',body'],
-		function(form, env, k){ 
-			var derived = new Scope(env);
+	[	['.trivial', ['.lambda.scoped', [',..args'], ',body', ',scope']],
+		['.lambda.scoped', [',..args'], ',body', ',scope'],
+		function(form, env, k){
+			var derived = this.scope; derived.semiparent = env;
 			var args = this.args.map(function(arg){ 
 				derived.declare(arg, true);
 				return re(arg, derived, id)
@@ -334,10 +350,10 @@ var re = syntax_rule(
 				body = ['.begin', ['.set', derived.tThis, ['.thisp']], body];
 			}
 			if(derived.tArgs){
-				body = ['.begin', ['.set', derived.tThis, ['.argsp']], body];
+				body = ['.begin', ['.set', derived.tArgs, ['.argsp']], body];
 			}
 			if(derived.isGenerator){
-				return k(['.lambda', args, ['.begin', 
+				return k(['.lambda.scoped', args, ['.begin', 
 					['.set', derived.tStep, ['.lambda', [], body]],
 					['.set', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], ['ex'], ['.return', [derived.tCatch, 'ex']]]]],
 					['.set', derived.tCatch, ['.lambda', ['e'], ['.throw', 'e']]],
@@ -346,17 +362,25 @@ var re = syntax_rule(
 					['.return', ['.thisp']]
 				], derived])
 			} else {
-				return k(['.lambda', this.args, body, derived])
+				return k(['.lambda.scoped', this.args, body, derived])
 			}
 		}],
-	[['.beta', ',args', ',body', ',..params'], function(form, env, k){
+	[	['.trivial', ['.lambda', [',..args'], ',body']], 
+		['.lambda', [',..args'], ',body'], function(form, env, k){ return re(['.lambda.scoped', this.args, this.body, new Scope(null, env)], env, k) }],
+	[['.beta', [',..args'], ',body', ',..params'], function(form, env, k) {
+		return re(['.beta.scoped', this.args, this.body, new Scope(null, env)].concat(this.params), env, k)
+	}],
+	[['&', ['.beta', [',..args'], ',body', ',..params']], function(form, env, k) {
+		return re(['&', ['.beta.scoped', this.args, this.body, new Scope(null, env)].concat(this.params)])
+	}],
+	[['.beta.scoped', [',..args'], ',body', ',scope', ',..params'], function(form, env, k){
 		// Note: .beta is designed for [let] construction in most functional
 		// languages. It does NOT change the semantics of [return]. Therefore
 		// we need a tagging system to ensure that normal exit differs from
 		// returning.
 		var $params = this.params, $body = this.body, $args = this.args;
+		var derived = this.scope; derived.semiparent = env;
 		return re$($params, env, function(params){
-			var derived = new Scope(env);
 			// always generates tThis and tArgs
 			if(!env.tThis) env.tThis = env.newt(); derived.tThis = env.tThis;
 			if(!env.tArgs) env.tArgs = env.newt(); derived.tArgs = env.tArgs;
@@ -386,23 +410,23 @@ var re = syntax_rule(
 			if(returnUsed){
 				return ['.begin',
 					['.set', tag, ['.quote', false]],
-					[['.lambda', args, b, derived]].concat(params),
+					[['.lambda.scoped', args, b, derived]].concat(params),
 					['.if', tag, env.exitK(t), k(t)]
 				]	
 			} else {
 				for(var j = 0; j < normalExitReturns.length; j++){
 					normalExitReturns[j][1] = normalExitReturns[j][1][2]
 				}
-				return k([['.lambda', args, b, derived]].concat(params))
+				return k([['.lambda.scoped', args, b, derived]].concat(params))
 			}
 		})
 	}],
-	[['&', ['.beta', ',args', ',body', ',..params']], function(form, env, k){
+	[['&', ['.beta.scoped', ',args', ',body', ',scope', ',..params']], function(form, env, k){
 		var $params = this.params, $body = this.body, $args = this.args;
-		if(!isDelaied($body)) return re(['.beta', $args, $body].concat($params));
+		if(!isDelaied($body)) return re(['.beta.scoped', $args, $body, this.scope].concat($params));
+		var derived = this.scope; derived.semiparent = env;
 		return re$($params, env, function(params){
 			// Body is delaied
-			var derived = new Scope(env);
 			if(!env.tThis) env.tThis = env.newt(); derived.tThis = env.tThis;
 			if(!env.tArgs) env.tArgs = env.newt(); derived.tArgs = env.tArgs;
 			derived.isGenerator = true;
@@ -420,7 +444,7 @@ var re = syntax_rule(
 			var tNorm = derived.newt();
 			var tnx = derived.newt();
 
-			return ['.return', [['.lambda', args, ['.begin', 
+			return ['.return', [['.lambda.scoped', args, ['.begin', 
 				['.set', tExit, ['.lambda', [tx], env.exitK(tx)]],
 				['.set', tNorm, ['.lambda', [tnx], k(tnx)]],
 				['.set', derived.tStep, ['.lambda', [], re($body, derived, function(x){ return ['.return', [tNorm, x]] })]],

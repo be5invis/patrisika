@@ -127,7 +127,7 @@ var te = syntax_rule(
 			generator: false
 		}
 	}],
-	[['.lambda', ',args', ',body', ',scope'], function(form){
+	[['.lambda.scoped', ',args', ',body', ',scope'], function(form){
 		var body = tb(this.body);
 		var s = this.scope;
 		var locals = s.locals.map(function(id){

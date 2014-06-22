@@ -1,5 +1,5 @@
 var util = require('util');
-var Scope = require('./passes/commons/scope').Scope;
+var Scope = require('patrisika-scopes').Scope;
 var deo = require('./passes/latter/cps-deo').pass;
 var cdg = require('./passes/latter/codegen').pass;
 
@@ -15,6 +15,7 @@ exports.defaultExterns = function(externs){
 			return ex([op].concat(form.slice(1)), env)
 		}
 	}
+/*
 	externs.macros.put('lambda', operatorRename('.lambda'));
 	externs.macros.put('begin', operatorRename('.begin'));
 	externs.macros.put('if', operatorRename('.if'));
@@ -26,7 +27,7 @@ exports.defaultExterns = function(externs){
 		var paras = pairs.map(function(pair){ return pair[1] })
 		return ex(['.beta', args, form[form.length - 1]].concat(paras), env)
 	});
-
+*/
 	externs.declare('Object')
 	externs.declare('Number')
 	externs.declare('Boolean')
