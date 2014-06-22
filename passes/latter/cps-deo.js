@@ -18,8 +18,6 @@ function isDelaied(form) {
 }
 
 
-function RET(x){ return ['.return', x] };
-function GEN_FINISH(x){ return ['.return', ['.hash', ['done', ['.quote', true]], ['value', x]]] };
 function KEY(x){ return x[0] };
 function VAL(x){ return x[1] };
 
@@ -321,9 +319,15 @@ var re = syntax_rule(
 				derived.tStep = derived.newt();
 				derived.tNext = derived.newt();
 				derived.tCatch = derived.newt();
-				derived.exitK = GEN_FINISH;
+				derived.exitK = function(x){
+					return ['.begin', 
+						['.set', env.tStep, ['.lambda', [], ['.throw', 'Iteration Stopped']]],
+						['.return', ['.hash', 
+							['done', ['.quote', true]],
+							['value', x]]]]
+				};
 			} else {
-				derived.exitK = RET;			
+				derived.exitK = function(x){ return ['.return', x] };
 			}
 			var body = re(b, derived, derived.exitK)
 			if(derived.tThis){

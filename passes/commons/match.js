@@ -76,4 +76,4 @@ exports._ = _;
 exports.atom = function(x){ return typeof x === 'string' }
 exports.empty = function(x){ return !x }
 exports.any = function(x){ return true }
-exports.prim = function(x){ return exports.atom(x) && (x === '.list' || /^\W+$/.test(x) ) && x != '&' && x != '&!' }
+exports.prim = function(x){ return exports.atom(x) && (x === '.list' || x === '.new' || /^\W+$/.test(x) ) && x != '&' && x != '&!' }

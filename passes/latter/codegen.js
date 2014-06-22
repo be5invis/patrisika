@@ -227,6 +227,19 @@ var te = syntax_rule(
 			})
 		}
 	}],
+	[['.list', ',..args'], function(form){
+		return {
+			type: "ArrayExpression",
+			elements: this.args.map(te)
+		}
+	}],
+	[['.new', ',callee', ',..args'], function(form){
+		return {
+			type: "NewExpression",
+			callee: te(this.callee),
+			arguments: this.args.map(te)
+		}
+	}],
 	[[',callee', ',..args'], function(form){
 		return {
 			type: 'CallExpression',
