@@ -142,7 +142,7 @@ var te = syntax_rule(
 				type: "VariableDeclarator",
 				id: {type: "Identifier", name: s.castTempName(id)},
 				init: null
-			}			
+			}
 		}));
 		if(locals.length){
 			body.body.unshift({

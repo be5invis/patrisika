@@ -10,6 +10,7 @@ var atom = require('../commons/match.js').atom;
 var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
 var prim = require('../commons/match.js').prim;
+var triv = require('../commons/match.js').triv;
 
 var Scope = require('patrisika-scopes').Scope;
 
@@ -671,6 +672,7 @@ function mb(form){
 				res.push(a[j])
 			}
 		};
+		res = res.slice(0, -1).filter(function(x){ return !triv(x) }).concat([res[res.length - 1]])
 		return ['.begin'].concat(res);
 	} else if(form instanceof Array && form[0] === '.trivial') {
 		return mb(form[1])
