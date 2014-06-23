@@ -1,10 +1,9 @@
 var util = require('util');
 var Scope = require('patrisika-scopes').Scope;
-var deo = require('./passes/latter/cps-deo').pass;
-var cdg = require('./passes/latter/codegen').pass;
+var deo = require('./passes/cps-deo').pass;
+var cdg = require('./passes/codegen').pass;
 
-exports.generate = function(ast, externs){
-	var globals = new Scope(externs);
+exports.generate = function(ast, globals){
 	var r = deo(ast, globals);
 	util.inspect(r, {depth: null})
 	return cdg(r, globals)
