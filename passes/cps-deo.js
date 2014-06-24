@@ -51,7 +51,7 @@ var trivial = syntax_rule(
 		return a;
 	}],
 	[['.beta.scoped', ',args', ',body', ',scope', ',..params'], function(form){
-		var a = ['.beta.scoped', this.args, trivial(this.body)];
+		var a = ['.beta.scoped', this.args, trivial(this.body), this.scope];
 		for(var j = 4; j < form.length; j++){
 			a[j] = trivial(form[j])
 		};
@@ -346,7 +346,7 @@ var re = syntax_rule(
 				derived.tCatch = derived.newt();
 				derived.exitK = function(x){
 					return ['.begin', 
-						['.set', env.tStep, ['.lambda', [], ['.throw', 'Iteration Stopped']]],
+						['.set', derived.tStep, ['.lambda', [], ['.throw', ['.quote', 'Iteration Stopped']]]],
 						['.return', ['.hash', 
 							['done', ['.quote', true]],
 							['value', x]]]]
@@ -491,6 +491,18 @@ var re = syntax_rule(
 	}],
 	[	['.trivial', ['.unit']],
 		['.unit'], function(form, env, k){ return k(form) }],
+	[	['.trivial', ['.hash', ',..pairs']],
+		function(form, env, k){
+			var $keys = this.pairs.map(KEY);
+			var $values = this.pairs.map(VAL);
+			return ret$($values, env, function(x$){
+				var a = [];
+				for(var j = 0; j < $keys.length; j++){
+					a[j] = [$keys[j], x$[j]]
+				};
+				return k(['.hash'].concat(a));
+			})
+		}],
 	[['.trivial', [_('operator', prim), ',..args']], function(form, env, k){
 		var $operator = this.operator, $args = this.args;
 		return ret$($args, env, function(args){
@@ -685,5 +697,6 @@ function mb(form){
 
 exports.pass = function(form, globals){
 	globals.exitK = id;
-	return mb(rs(trivial(form), globals, id))
+	var tf = trivial(form)
+	return mb(rs(tf, globals, id))
 }
