@@ -23,19 +23,7 @@ function tb(form){
 	return s;
 }
 var ts = syntax_rule(
-	[['.locals', ',..ids'], function(form){
-		return {
-			type: 'VariableDeclaration',
-			declarations: this.ids.map(function(child){
-				return {
-					type: 'VariableDeclarator',
-					id: te(child),
-					init: null
-				}
-			}),
-			kind: 'var'
-		}
-	}],
+
 	[['.begin', ',..statements'], function(form){
 		return {
 			type: 'BlockStatement',

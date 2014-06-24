@@ -2,6 +2,7 @@
 	"version": "0.6.0",
 	"name": "patrisika",
 	"description": "An AST library",
+	"repository": "https://github.com/be5invis/patrisika",
 	"dependencies": {
 		"patrisika-scopes": ">=0.3.0",
 		"escodegen": ">=1.1.0"

@@ -5,7 +5,6 @@ var cdg = require('./passes/codegen').pass;
 
 exports.generate = function(ast, globals){
 	var r = deo(ast, globals);
-	util.inspect(r, {depth: null})
 	return cdg(r, globals)
 }
 exports.DefaultExterns = function(){
