@@ -15,7 +15,7 @@ var triv = require('../commons/match.js').triv;
 var Scope = require('patrisika-scopes').Scope;
 
 function isDelaied(form) {
-	return form instanceof Array && (form[0] === '&' || form[0] === '&!')
+	return form instanceof Array && (form[0] === '.&' || form[0] === '.&!')
 }
 
 function RET(x){ return ['.return', x] }
@@ -37,7 +37,7 @@ var trivial = syntax_rule(
 	[['.unit'], function(form){ return ['.trivial', form] }],
 	[['.thisp'], function(form){ return ['.trivial', form] }],
 	[['.argsp'], function(form){ return ['.trivial', form] }],
-	[['.yield', ',x'], function(form){ return ['&!', trivial(this.x)] }],
+	[['.yield', ',x'], function(form){ return ['.&!', trivial(this.x)] }],
 	[['.beta', ',args', ',body', ',..params'], function(form){
 		var a = ['.beta', this.args];
 		for(var j = 2; j < form.length; j++){
@@ -45,7 +45,7 @@ var trivial = syntax_rule(
 		};
 		for(var j = 2; j < a.length; j++){
 			if(isDelaied(a[j])) {
-				return ['&', a];
+				return ['.&', a];
 			}
 		};
 		return a;
@@ -55,10 +55,10 @@ var trivial = syntax_rule(
 		for(var j = 4; j < form.length; j++){
 			a[j] = trivial(form[j])
 		};
-		if(isDelaied(a[2])) return ['&', a]
+		if(isDelaied(a[2])) return ['.&', a]
 		for(var j = 4; j < a.length; j++){
 			if(isDelaied(a[j])) {
-				return ['&', a];
+				return ['.&', a];
 			}
 		};
 		return a;
@@ -74,7 +74,7 @@ var trivial = syntax_rule(
 		}
 		for(var j = 1; j < a.length; j++){
 			if(isDelaied(a[j])) {
-				return ['&', a];
+				return ['.&', a];
 			}
 		};
 		return a;
@@ -83,7 +83,7 @@ var trivial = syntax_rule(
 		var $block = trivial(this.block);
 		var $handler = trivial(this.handler);
 		//env.declare(this.param);
-		if(isDelaied($block) || isDelaied($handler)) { return ['&', '.try', $block, [this.param], $handler] }
+		if(isDelaied($block) || isDelaied($handler)) { return ['.&', '.try', $block, [this.param], $handler] }
 		else { return ['.try', $block, [this.param], $handler] }
 	}],
 	[['.hash', ',..args'], function(form){
@@ -102,7 +102,7 @@ var trivial = syntax_rule(
 			}
 		};
 		if(delaied){
-			return ['&', a]
+			return ['.&', a]
 		} else if(trivialForm){
 			return ['.trivial', a];
 		} else {
@@ -126,7 +126,7 @@ var trivial = syntax_rule(
 			}
 		};
 		if(delaied){
-			return ['&', a]
+			return ['.&', a]
 		} else if(trivialForm){
 			return ['.trivial', a];
 		} else {
@@ -186,7 +186,7 @@ var rs = syntax_rule(
 var re = syntax_rule(
 	[empty, function(form, env, k){ return k(['.unit']) }],
 	// Deferred nodes
-	[['&!', ',x'], function(form, env, k){
+	[['.&!', ',x'], function(form, env, k){
 		var t = env.newt();
 		return re(this.x, env, function(x){
 			return ['.begin',
@@ -199,21 +199,21 @@ var re = syntax_rule(
 		})
 	}],
 	// Flow Controls, Deferred
-	[['&', ['.begin', ',x']], function(form, env, k){
+	[['.&', ['.begin', ',x']], function(form, env, k){
 		return re(this.x, env, k)
 	}],
-	[['&', ['.begin', ',x', ',..rest']], function(form, env, k){
+	[['.&', ['.begin', ',x', ',..rest']], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
-			return re(['&', ['.begin'].concat($rest)], env, function(v){
+			return re(['.&', ['.begin'].concat($rest)], env, function(v){
 				return k(v);
 			})
 		})
 	}],
-	[['&', ['.if', ',test', ',consequent']], function(form, env, k){
-		return re(['&', ['.if', this.test, this.consequent, ['.unit']]], env, k)
+	[['.&', ['.if', ',test', ',consequent']], function(form, env, k){
+		return re(['.&', ['.if', this.test, this.consequent, ['.unit']]], env, k)
 	}],
-	[['&', ['.if', ',test', ',consequent', ',alternate']], function(form, env, k){
+	[['.&', ['.if', ',test', ',consequent', ',alternate']], function(form, env, k){
 		var $test = this.test, $consequent = this.consequent, $alternate = this.alternate;
 		var t = env.newt();
 		var tx = env.newt();
@@ -227,7 +227,7 @@ var re = syntax_rule(
 			})
 		];
 	}],
-	[['&', ['.while', ',test', ',body']], function(form, env, k){
+	[['.&', ['.while', ',test', ',body']], function(form, env, k){
 		var $test = this.test, $body = this.body;
 		var t = env.newt();
 		var tr = env.newt();
@@ -244,7 +244,7 @@ var re = syntax_rule(
 			['.return', [tr]]
 		];
 	}],
-	[['&', ['.try', ',block', [',param'], ',handler']], function(form, env, k){
+	[['.&', ['.try', ',block', [',param'], ',handler']], function(form, env, k){
 		var $block = this.block, $param = this.param, $handler = this.handler;
 		env.declare($param);
 		var t = env.newt(), tx = env.newt(), te = env.newt();
@@ -265,10 +265,10 @@ var re = syntax_rule(
 		]
 	}],
 	// Flow controls, Plain
-	[['&', ['.return', ',x']], ['.return', ',x'], function(form, env, k){
+	[['.&', ['.return', ',x']], ['.return', ',x'], function(form, env, k){
 		return re(this.x, env, env.exitK)
 	}],
-	[['&', ['.throw', ',x']], ['.throw', ',x'], function(form, env, k){
+	[['.&', ['.throw', ',x']], ['.throw', ',x'], function(form, env, k){
 		if(env.isGenerator){
 			return re(this.x, env, function(x){ return ['.return', [env.tCatch, x]] })
 		} else {
@@ -367,7 +367,7 @@ var re = syntax_rule(
 					['.set', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], ['ex'], ['.return', [derived.tCatch, 'ex']]]]],
 					['.set', derived.tCatch, ['.lambda', ['e'], ['.throw', 'e']]],
 					['.set', ['.', ['.thisp'], ['.quote', 'next']], derived.tNext],
-					['.set', ['.', ['.thisp'], ['.quote', 'throw']], derived.tCatch],
+					['.set', ['.', ['.thisp'], ['.quote', 'throw']], ['.lambda', ['x'], ['.return', [derived.tCatch, 'x']]]],
 					['.return', ['.thisp']]
 				], derived])
 			} else {
@@ -379,8 +379,8 @@ var re = syntax_rule(
 	[['.beta', [',..args'], ',body', ',..params'], function(form, env, k) {
 		return re(['.beta.scoped', this.args, this.body, new Scope(null, env)].concat(this.params), env, k)
 	}],
-	[['&', ['.beta', [',..args'], ',body', ',..params']], function(form, env, k) {
-		return re(['&', ['.beta.scoped', this.args, this.body, new Scope(null, env)].concat(this.params)])
+	[['.&', ['.beta', [',..args'], ',body', ',..params']], function(form, env, k) {
+		return re(['.&', ['.beta.scoped', this.args, this.body, new Scope(null, env)].concat(this.params)])
 	}],
 	[['.beta.scoped', [',..args'], ',body', ',scope', ',..params'], function(form, env, k){
 		// Note: .beta is designed for [let] construction in most functional
@@ -430,7 +430,7 @@ var re = syntax_rule(
 			}
 		})
 	}],
-	[['&', ['.beta.scoped', ',args', ',body', ',scope', ',..params']], function(form, env, k){
+	[['.&', ['.beta.scoped', ',args', ',body', ',scope', ',..params']], function(form, env, k){
 		var $params = this.params, $body = this.body, $args = this.args;
 		if(!isDelaied($body)) return re(['.beta.scoped', $args, $body, this.scope].concat($params));
 		var derived = this.scope; derived.semiparent = env;
@@ -521,9 +521,9 @@ var re = syntax_rule(
 	[['.trivial', ',x'], function(form, env, k){ return k(this.x) }],
 
 	// Other Expressions
-	[	['&', ['.set', ['&', ['.', ',obj', ',field']], ',right']], 
-		['&', ['.set', ['.trivial', ['.', ',obj', ',field']], ',right']], 
-		['&', ['.set', ['.', ',obj', ',field'], ',right']],
+	[	['.&', ['.set', ['.&', ['.', ',obj', ',field']], ',right']], 
+		['.&', ['.set', ['.trivial', ['.', ',obj', ',field']], ',right']], 
+		['.&', ['.set', ['.', ',obj', ',field'], ',right']],
 		['.set', ['.', ',obj', ',field'], ',right'],
 		['.set', ['.trivial', ['.', ',obj', ',field']], ',right'], 
 		function (form, env, k){
@@ -536,17 +536,17 @@ var re = syntax_rule(
 				})
 			})
 		}],
-	[	['&', ['.set', ['.trivial', ',left'], ',right']],
-		['&', ['.set', ',left', ',right']], 
+	[	['.&', ['.set', ['.trivial', ',left'], ',right']],
+		['.&', ['.set', ',left', ',right']], 
 		['.set', ['.trivial', ',left'], ',right'], 
 		['.set', ',left', ',right'], 
 		function (form, env, k){
 			var $left = this.left, $right = this.right;
 			return re($right, env, function(e){ return k(['.set', re($left, env, id), e]) })
 		}],
-	[	['&', [['.', ',left', ',right'], ',..args']],
-		['&', [['.trivial', ['.', ',left', ',right']], ',..args']],
-		['&', [['&', '.', ',left', ',right'], ',..args']], 
+	[	['.&', [['.', ',left', ',right'], ',..args']],
+		['.&', [['.trivial', ['.', ',left', ',right']], ',..args']],
+		['.&', [['.&', '.', ',left', ',right'], ',..args']], 
 		[['.', ',left', ',right'], ',..args'], 
 		function (form, env, k){
 			var $left = this.left, $right = this.right, $args = this.args;
@@ -560,7 +560,7 @@ var re = syntax_rule(
 				})
 			})
 		}],
-	[	['&', ['.hash', ',..pairs']],
+	[	['.&', ['.hash', ',..pairs']],
 		['.hash', ',..pairs'],
 		function(form, env, k){
 			var $keys = this.pairs.map(KEY);
@@ -573,29 +573,29 @@ var re = syntax_rule(
 				return k(['.hash'].concat(a));
 			})
 		}],
-	[['&', ['&&']], function(form, env, k){ return k(['.quote', true]) }],
-	[['&', ['&&', ',x']], function(form, env, k){ return re(this.x, env, k) }],
-	[['&', ['&&', ',x', ',..rest']], function(form, env, k){
+	[['.&', ['&&']], function(form, env, k){ return k(['.quote', true]) }],
+	[['.&', ['&&', ',x']], function(form, env, k){ return re(this.x, env, k) }],
+	[['.&', ['&&', ',x', ',..rest']], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
 			var t = env.newt();
 			var tx = env.newt();
 			return ['.begin', 
 				['.set', t, ['.lambda', [tx], k(tx)]],
-				['.if', x, re(['&', ['&&'].concat($rest)], env, function(x){ return ['.return', [t, x]] }), ['.return', [t, x]]]
+				['.if', x, re(['.&', ['&&'].concat($rest)], env, function(x){ return ['.return', [t, x]] }), ['.return', [t, x]]]
 			]
 		})
 	}],
-	[['&', ['||']], function(form, env, k){ return k(['.quote', false]) }],
-	[['&', ['||', ',x']], function(form, env, k){ return re(this.x, env, k) }],
-	[['&', ['||', ',x', ',..rest']], function(form, env, k){
+	[['.&', ['||']], function(form, env, k){ return k(['.quote', false]) }],
+	[['.&', ['||', ',x']], function(form, env, k){ return re(this.x, env, k) }],
+	[['.&', ['||', ',x', ',..rest']], function(form, env, k){
 		var $rest = this.rest;
 		return ra(this.x, env, function(x){
 			var t = env.newt();
 			var tx = env.newt();
 			return ['.begin', 
 				['.set', t, ['.lambda', [tx], k(tx)]],
-				['.if', x, ['.return', [t, x]], re(['&', ['||'].concat($rest)], env, function(x){ return ['.return', [t, x]] })]
+				['.if', x, ['.return', [t, x]], re(['.&', ['||'].concat($rest)], env, function(x){ return ['.return', [t, x]] })]
 			]
 		})
 	}],
@@ -606,7 +606,7 @@ var re = syntax_rule(
 		return ra(this.x, env, function(x){
 			var t = env.newt();
 			return ['.begin', 
-				['.if', x, re(['&', ['&&'].concat($rest)], env, function(x){ return ['.set', t, x] }), ['.set', t, x]],
+				['.if', x, re(['.&', ['&&'].concat($rest)], env, function(x){ return ['.set', t, x] }), ['.set', t, x]],
 				k(t)
 			]
 		})
@@ -618,12 +618,12 @@ var re = syntax_rule(
 		return ra(this.x, env, function(x){
 			var t = env.newt();
 			return ['.begin', 
-				['.if', x, ['.set', t, x], re(['&', ['||'].concat($rest)], env, function(x){ return ['.set', t, x] })],
+				['.if', x, ['.set', t, x], re(['.&', ['||'].concat($rest)], env, function(x){ return ['.set', t, x] })],
 				k(t),
 			]
 		})
 	}],
-	[	['&', [_('operator', prim), ',..args']],
+	[	['.&', [_('operator', prim), ',..args']],
 		[_('operator', prim), ',..args'],
 		function(form, env, k){
 			var $operator = this.operator, $args = this.args;
@@ -631,7 +631,7 @@ var re = syntax_rule(
 				return k([$operator].concat(x$))
 			})
 		}],
-	[	['&', [',callee', ',..args']], 
+	[	['.&', [',callee', ',..args']], 
 		[',callee', ',..args'], 
 		function(form, env, k){
 			var $args = this.args, $callee = this.callee;
@@ -641,8 +641,8 @@ var re = syntax_rule(
 				})
 			})
 		}],
-//	[['&', _('x', atom)], function(form, env, k){ return k(this.x) }],
-//	[['&', _('x', ['.t', ',name'])], function(form, env, k){ return k(this.x) }],
+//	[['.&', _('x', atom)], function(form, env, k){ return k(this.x) }],
+//	[['.&', _('x', ['.t', ',name'])], function(form, env, k){ return k(this.x) }],
 	[any, function(form, env, k){ return k(form) }]
 );
 
