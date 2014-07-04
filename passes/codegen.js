@@ -162,7 +162,8 @@ var te = syntax_rule(
 	}],
 	[['.quote', ',val'], function(form){ 
 		if(this.val === undefined) return {type: 'UnaryExpression', operator:'void', prefix: true, argument: {type: 'Literal', value: 0}}
-		return { type: 'Literal', value: this.val }
+		else if(typeof this.val === "number" && this.val < 0) return {type: "UnaryExpression", operator:'-', prefix: true, argument: {type: "Literal", value: -this.val}}
+		else return { type: 'Literal', value: this.val }
 	}],
 	[['.unit'], function(form){ 
 		return {type: 'UnaryExpression', operator:'void', prefix: true, argument: {type: 'Literal', value: 0}}
