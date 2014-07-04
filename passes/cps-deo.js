@@ -79,11 +79,10 @@ var trivial = syntax_rule(
 		};
 		return a;
 	}],
-	[['.try', ',block', [_('param', atom)], ',handler'], function(form){
+	[['.try', ',block', [',param'], ',handler'], function(form){
 		var $block = trivial(this.block);
 		var $handler = trivial(this.handler);
-		//env.declare(this.param);
-		if(isDelaied($block) || isDelaied($handler)) { return ['.&', '.try', $block, [this.param], $handler] }
+		if(isDelaied($block) || isDelaied($handler)) { return ['.&', ['.try', $block, [this.param], $handler]] }
 		else { return ['.try', $block, [this.param], $handler] }
 	}],
 	[['.hash', ',..args'], function(form){
@@ -166,7 +165,15 @@ var rs = syntax_rule(
 		}
 	}],
 	[['.try', ',block', [',param'], ',handler'], function(form, env, k){
-		return k(['.try', rs(this.block, env, id), [this.param], rs(this.handler, env, id)]);
+		var $param = this.param;
+		if(atom($param)) {
+			env.declare($param);
+			var param = env.use($param);
+		} else {
+			var param = $param;
+		}
+
+		return k(['.try', rs(this.block, env, id), [param], rs(this.handler, env, id)]);
 	}],
 	[['.begin', ',head', ',..rear'], function(form, env, k){
 		return rs(this.head, env, function(e){
@@ -246,7 +253,12 @@ var re = syntax_rule(
 	}],
 	[['.&', ['.try', ',block', [',param'], ',handler']], function(form, env, k){
 		var $block = this.block, $param = this.param, $handler = this.handler;
-		env.declare($param);
+		if(atom($param)) {
+			env.declare($param);
+			var param = env.use($param);
+		} else {
+			var param = $param;
+		}
 		var t = env.newt(), tx = env.newt(), te = env.newt();
 		var b = env.newt();
 		return ['.begin',
@@ -255,7 +267,7 @@ var re = syntax_rule(
 			['.set', b, env.tCatch],
 			['.set', env.tStep, ['.lambda', [], re($block, env, function(x){ return ['.return', [t, x]]})]],
 			['.set', env.tCatch, ['.lambda', [te], ['.begin',
-				['.set', env.use($param), te],
+				['.set', param, te],
 				['.set', env.tCatch, b],
 				re($handler, env, function(x){
 					return ['.return', [t, x]]
@@ -324,9 +336,14 @@ var re = syntax_rule(
 		var $block = this.block;
 		var $param = this.param;
 		var $handler = this.handler;
-		env.declare($param);
+		if(atom($param)) {
+			env.declare($param);
+			var param = env.use($param);
+		} else {
+			var param = $param;
+		}
 		var t = env.newt();
-		return ['.begin', ['.try', re($block, env, function(x){ return ['.set', t, x] }), [env.use($param)],
+		return ['.begin', ['.try', re($block, env, function(x){ return ['.set', t, x] }), [param],
 			re($handler, env, function(x){ return ['.set', t, x] })], k(t)];
 	}],
 	// Lambdas and Betas
@@ -698,5 +715,6 @@ function mb(form){
 exports.pass = function(form, globals){
 	globals.exitK = id;
 	var tf = trivial(form)
+//	console.log(require('util').inspect(tf, {depth: null}));
 	return mb(rs(tf, globals, id))
 }
