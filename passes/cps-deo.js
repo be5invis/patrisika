@@ -449,7 +449,7 @@ var re = syntax_rule(
 	}],
 	[['.&', ['.beta.scoped', ',args', ',body', ',scope', ',..params']], function(form, env, k){
 		var $params = this.params, $body = this.body, $args = this.args;
-		if(!isDelaied($body)) return re(['.beta.scoped', $args, $body, this.scope].concat($params));
+		if(!isDelaied($body)) return re(['.beta.scoped', $args, $body, this.scope].concat($params), env, k);
 		var derived = this.scope; derived.semiparent = env;
 		return re$($params, env, function(params){
 			// Body is delaied
