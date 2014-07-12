@@ -9,6 +9,7 @@ var any = require('../commons/match.js').any;
 var ref = require('../commons/match.js').ref;
 
 var resolveIdentifier = require('patrisika-scopes').resolveIdentifier
+var resolveTemp = require('patrisika-scopes').resolveTemp
 
 var util = require('util');
 
@@ -128,7 +129,7 @@ var te = syntax_rule(
 		locals = locals.concat(s.temps.map(function(id){
 			return {
 				type: "VariableDeclarator",
-				id: {type: "Identifier", name: s.castTempName(id)},
+				id: {type: "Identifier", name: resolveTemp(id, s)},
 				init: null
 			}
 		}));
@@ -148,7 +149,7 @@ var te = syntax_rule(
 		}
 	}],
 	[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
-	[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: this.scope.castTempName(this.id) }}],
+	[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope) }}],
 	[['.id', ',id', ',scope'], function(form){ 
 		return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope)} 
 	}],
