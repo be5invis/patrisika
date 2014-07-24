@@ -1,5 +1,6 @@
 var util = require('util');
 var Scope = require('patrisika-scopes').Scope;
+var escapeId = require('patrisika-scopes').escapeId;
 var deo = require('./passes/cps-deo').pass;
 var cdg = require('./passes/codegen').pass;
 
@@ -9,7 +10,7 @@ exports.generate = function(ast, globals){
 }
 exports.DefaultExterns = function(){
 	var externs = new Scope();
-	externs.castName = function(name){ return name };
+	externs.castName = escapeId;
 
 	externs.declare('Object')
 	externs.declare('Number')

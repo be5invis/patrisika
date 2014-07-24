@@ -207,6 +207,14 @@ var te = syntax_rule(
 			argument: te(this.argument)
 		}
 	}],
+	[['.typeof', ',argument'], function(form) {
+		return {
+			type: "UnaryExpression",
+			operator: "typeof",
+			prefix: true,
+			argument: te(this.argument)
+		}
+	}],
 	[['.hash', ',..pairs'], function(form){
 		return {
 			type: 'ObjectExpression',
