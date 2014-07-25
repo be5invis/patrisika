@@ -148,6 +148,11 @@ var te = syntax_rule(
 			generator: false
 		}
 	}],
+	[['.lambda.scoped', ',args', ',body', ',scope', ',id'], function(form){
+		var e = te(form.slice(0, -1));
+		e.id = te(this.id);
+		return e;
+	}],
 	[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
 	[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope) }}],
 	[['.id', ',id', ',scope'], function(form){ 
