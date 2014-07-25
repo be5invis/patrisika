@@ -356,11 +356,14 @@ var re = syntax_rule(
 				return re(arg, derived, id)
 			});
 			var b = this.body;
+			var selfid = env.newt();
 			if(isDelaied(b)) {
 				derived.isGenerator = true;
 				derived.tStep = derived.newt();
 				derived.tNext = derived.newt();
 				derived.tCatch = derived.newt();
+				derived.tRetp = derived.newt();
+				derived.tDerivFn = derived.newt();
 				derived.exitK = function(x){
 					return ['.begin', 
 						['.set', derived.tStep, ['.lambda', [], ['.throw', ['.quote', 'Iteration Stopped']]]],
@@ -383,12 +386,16 @@ var re = syntax_rule(
 					['.set', derived.tStep, ['.lambda', [], body]],
 					['.set', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], ['ex'], ['.return', [derived.tCatch, 'ex']]]]],
 					['.set', derived.tCatch, ['.lambda', ['e'], ['.throw', 'e']]],
-					['.set', ['.', ['.thisp'], ['.quote', 'next']], derived.tNext],
-					['.set', ['.', ['.thisp'], ['.quote', 'throw']], ['.lambda', ['x'], ['.return', [derived.tCatch, 'x']]]],
-					['.return', ['.thisp']]
-				], derived])
+					['.if', ['.is', ['.thisp'], selfid], ['.set', derived.tRetp, ['.thisp']], ['.begin',
+						['.set', derived.tDerivFn, ['.lambda', [], ['.unit']]],
+						['.set', ['.', derived.tDerivFn, ['.quote', 'prototype']],  ['.', selfid, ['.quote', 'prototype']]],
+						['.set', derived.tRetp, ['.new', derived.tDerivFn]]]],
+					['.set', ['.', derived.tRetp, ['.quote', 'next']], derived.tNext],
+					['.set', ['.', derived.tRetp, ['.quote', 'throw']], ['.lambda', ['x'], ['.return', [derived.tCatch, 'x']]]],
+					['.return', derived.tRetp]
+				], derived, selfid])
 			} else {
-				return k(['.lambda.scoped', this.args, body, derived])
+				return k(['.lambda.scoped', this.args, body, derived, selfid])
 			}
 		}],
 	[	['.trivial', ['.lambda', [',..args'], ',body']], 
