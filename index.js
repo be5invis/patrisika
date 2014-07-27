@@ -18,9 +18,12 @@ exports.DefaultExterns = function(){
 	externs.declare('String')
 	externs.declare('RegExp')
 	externs.declare('Function')
+	externs.declare('Error')
+	externs.declare('Math')
 	externs.declare('alert')
 	externs.declare('console')
 	externs.declare('setInterval')
+	externs.declare('setTimeout')
 
 	return externs;
 };
