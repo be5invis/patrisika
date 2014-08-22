@@ -572,6 +572,7 @@ var re = syntax_rule(
 		['.&', [['.trivial', ['.', ',left', ',right']], ',..args']],
 		['.&', [['.&', '.', ',left', ',right'], ',..args']], 
 		[['.', ',left', ',right'], ',..args'], 
+		[['.trivial', ['.', ',left', ',right']], ',..args'], 
 		function (form, env, k){
 			var $left = this.left, $right = this.right, $args = this.args;
 			return ra($left, env, function(xl){

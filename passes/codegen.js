@@ -106,6 +106,17 @@ function Binopoid(spiderMonkeyNodeType){
 var binop = Binopoid('BinaryExpression');
 var logop = Binopoid('LogicalExpression');
 
+var uniop = function(operator, jsOperator) {
+	return [[operator, ',argument'], function(){
+		return {
+			type: "UnaryExpression",
+			operator: jsOperator || operator,
+			prefix: true,
+			argument: te(this.argument)
+		}
+	}]
+}
+
 var te = syntax_rule(
 	[['.lambda', ',args', ',body'], function(form){
 		return {
@@ -180,6 +191,10 @@ var te = syntax_rule(
 	[['.argsp'], function(form){
 		return {type: 'Identifier', name: 'arguments'}
 	}],
+	uniop('.typeof', 'typeof'),
+	uniop('!'),
+	uniop('+'),
+	uniop('-'),
 	binop('+'),
 	binop('-'),
 	binop('*'),
@@ -202,22 +217,6 @@ var te = syntax_rule(
 			left: te(this.left),
 			right: te(this.right),
 			operator: '='
-		}
-	}],
-	[['!', ',argument'], function(form) {
-		return {
-			type: "UnaryExpression",
-			operator: "!",
-			prefix: true,
-			argument: te(this.argument)
-		}
-	}],
-	[['.typeof', ',argument'], function(form) {
-		return {
-			type: "UnaryExpression",
-			operator: "typeof",
-			prefix: true,
-			argument: te(this.argument)
 		}
 	}],
 	[['.hash', ',..pairs'], function(form){
