@@ -11,11 +11,17 @@ AST for Patrisika is provided as JavaScript arraies. The following forms represe
 Represents a variable.
 ### ['.quote', value]
 Represents a literal value.
+### ['.unit']
+Represents `undefined` value.
+### ['.thisp']
+Represents `this` reference.
+### ['.argsp']
+Represents argument list passed into the current function.
 ### ['.lambda', [...params], body]
 Defines an anonymous function
 ### ['.list', ...items]
 Represents an array.
-### ['.hash', ...['propName', propValue, ε | 'get' | 'set']]
+### ['.hash', ...['propName', propValue]]
 Represents an object.
 ### ['.', base, member]
 Represents a membering operation, i.e. `base[member]`.
@@ -33,6 +39,10 @@ Represents a exception handling expression. Returns the value of `block` normall
 Throws value as an exception
 ### [fn, ...args]
 Once `fn` is a valid node, it means a common function invocation.
+### ['.yield', value]
+Represents a ES6 `yield` expression. Any functions directly containing such node will become a generator function described in ES6 specification.
+### ['.beta', [...params], body, ...args]
+Represents a beta redex which is similar to `[['.lambda', [...params], body], ...args]`, used to implement semantics of `let` in scheme.
 
 License
 -----------------------------------
