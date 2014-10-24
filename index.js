@@ -24,6 +24,7 @@ exports.DefaultExterns = function(){
 	externs.declare('console')
 	externs.declare('setInterval')
 	externs.declare('setTimeout')
+	externs.declare('JSON')
 
 	return externs;
 };
