@@ -225,7 +225,7 @@ var re = syntax_rule(
 		var t = env.newt();
 		var tx = env.newt();
 		return ['.begin', 
-			['.set', t, ['lambda', [tx], k(tx)]], 
+			['.set', t, ['.lambda', [tx], k(tx)]], 
 			ra($test, env, function(c){
 				return ['.if', c, 
 					re($consequent, env, function(x){ return ['.return', [t, x]] }),
