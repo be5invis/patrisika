@@ -18,7 +18,7 @@ Represents `this` reference.
 ### ['.argsp']
 Represents argument list passed into the current function.
 ### ['.lambda', [...params], body]
-Defines an anonymous function
+Defines an anonymous function.
 ### ['.list', ...items]
 Represents an array.
 ### ['.hash', ...['propName', propValue]]
@@ -33,12 +33,16 @@ Represents a while loop evaluation. It returns the value of `body` in the last e
 Represents a sequencial evaluation. Returns the last item evaluated.
 ### ['.return', value]
 Return a value. Similar to JavaScript `return` statement.
-### ['.try', block, param, handler]
+### ['.try', block, [param], handler]
 Represents a exception handling expression. Returns the value of `block` normally, or the value of `handler1` when a exception is thrown during evaluating `block`.
 ### ['.throw', value]
-Throws value as an exception
+Throws value as an exception.
+### ['.set', left, right]
+Assign `right` to variable or property node `left`.
 ### [fn, ...args]
 Once `fn` is a valid node, it means a common function invocation.
+### ['.new', callee, ...args]
+Initiates an instance of constructor `callee`, with `args` as arguments.
 ### ['.yield', value]
 Represents a ES6 `yield` expression. Any functions directly containing such node will become a generator function described in ES6 specification.
 ### ['.beta', [...params], body, ...args]
