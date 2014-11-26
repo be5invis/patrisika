@@ -544,131 +544,131 @@ var re = syntax_rule(
 
 	[['.trivial', ',x'], function(form, env, k){ return k(this.x) }],
 
-	// Other Expressions
-	[	['.&', ['.set', ['.&', ['.', ',obj', ',field']], ',right']], 
-		['.&', ['.set', ['.trivial', ['.', ',obj', ',field']], ',right']], 
-		['.&', ['.set', ['.', ',obj', ',field'], ',right']],
-		['.set', ['.', ',obj', ',field'], ',right'],
-		['.set', ['.trivial', ['.', ',obj', ',field']], ',right'], 
-		function (form, env, k){
-			var $obj = this.obj, $field = this.field, $right = this.right;
-			return ra($obj, env, function(xl){
-				return ra($field, env, function(xr){
-					return re($right, env, function(r){
-						return k(['.set', ['.', xl, xr], r])
-					})
-				})
-			})
-		}],
-	[	['.&', ['.set', ['.trivial', ',left'], ',right']],
-		['.&', ['.set', ',left', ',right']], 
-		['.set', ['.trivial', ',left'], ',right'], 
-		['.set', ',left', ',right'], 
-		function (form, env, k){
-			var $left = this.left, $right = this.right;
-			return re($right, env, function(e){ return k(['.set', re($left, env, id), e]) })
-		}],
-	[	['.&', [['.', ',left', ',right'], ',..args']],
-		['.&', [['.trivial', ['.', ',left', ',right']], ',..args']],
-		['.&', [['.&', '.', ',left', ',right'], ',..args']], 
-		[['.', ',left', ',right'], ',..args'], 
-		[['.trivial', ['.', ',left', ',right']], ',..args'], 
-		function (form, env, k){
-			var $left = this.left, $right = this.right, $args = this.args;
-			return ra($left, env, function(xl){
-				return re($right, env, function(xr){
-					var t = env.newt();
-					return ['.begin', ['.set', t, ['.', xl, xr]], re$($args, env, function(x$){
-						if(x$) return k([['.', t, ['.quote', 'call']], xl].concat(x$))
-						else return k([['.', t, ['.quote', 'call']], xl])
-					})]
-				})
-			})
-		}],
-	[	['.&', ['.hash', ',..pairs']],
-		['.hash', ',..pairs'],
-		function(form, env, k){
-			var $keys = this.pairs.map(KEY);
-			var $values = this.pairs.map(VAL);
-			return re$($values, env, function(x$){
-				var a = [];
-				for(var j = 0; j < $keys.length; j++){
-					a[j] = [$keys[j], x$[j]]
-				};
-				return k(['.hash'].concat(a));
-			})
-		}],
-	[['.&', ['&&']], function(form, env, k){ return k(['.quote', true]) }],
-	[['.&', ['&&', ',x']], function(form, env, k){ return re(this.x, env, k) }],
-	[['.&', ['&&', ',x', ',..rest']], function(form, env, k){
-		var $rest = this.rest;
-		return ra(this.x, env, function(x){
-			var t = env.newt();
-			var tx = env.newt();
-			return ['.begin', 
-				['.set', t, ['.lambda', [tx], k(tx)]],
-				['.if', x, re(['.&', ['&&'].concat($rest)], env, function(x){ return ['.return', [t, x]] }), ['.return', [t, x]]]
-			]
-		})
-	}],
-	[['.&', ['||']], function(form, env, k){ return k(['.quote', false]) }],
-	[['.&', ['||', ',x']], function(form, env, k){ return re(this.x, env, k) }],
-	[['.&', ['||', ',x', ',..rest']], function(form, env, k){
-		var $rest = this.rest;
-		return ra(this.x, env, function(x){
-			var t = env.newt();
-			var tx = env.newt();
-			return ['.begin', 
-				['.set', t, ['.lambda', [tx], k(tx)]],
-				['.if', x, ['.return', [t, x]], re(['.&', ['||'].concat($rest)], env, function(x){ return ['.return', [t, x]] })]
-			]
-		})
-	}],
-	[['&&'], function(form, env, k){ return k(['.quote', true]) }],
-	[['&&', ',x'], function(form, env, k){ return re(this.x, env, k) }],
-	[['&&', ',x', ',..rest'], function(form, env, k){
-		var $rest = this.rest;
-		return ra(this.x, env, function(x){
-			var t = env.newt();
-			return ['.begin', 
-				['.if', x, re(['.&', ['&&'].concat($rest)], env, function(x){ return ['.set', t, x] }), ['.set', t, x]],
-				k(t)
-			]
-		})
-	}],
-	[['||'], function(form, env, k){ return k(['.quote', false]) }],
-	[['||', ',x'], function(form, env, k){ return re(this.x, env, k) }],
-	[['||', ',x', ',..rest'], function(form, env, k){
-		var $rest = this.rest;
-		return ra(this.x, env, function(x){
-			var t = env.newt();
-			return ['.begin', 
-				['.if', x, ['.set', t, x], re(['.&', ['||'].concat($rest)], env, function(x){ return ['.set', t, x] })],
-				k(t),
-			]
-		})
-	}],
-	[	['.&', [_('operator', prim), ',..args']],
-		[_('operator', prim), ',..args'],
-		function(form, env, k){
-			var $operator = this.operator, $args = this.args;
-			return re$($args, env, function(x$){
-				return k([$operator].concat(x$))
-			})
-		}],
-	[	['.&', [',callee', ',..args']], 
-		[',callee', ',..args'], 
-		function(form, env, k){
-			var $args = this.args, $callee = this.callee;
-			return ra($callee, env, function(x0){
-				return re$($args, env, function(x$){
-					return k([x0].concat(x$))
-				})
-			})
-		}],
+  	// Other Expressions
+  	[	['.&', ['.set', ['.&', ['.', ',obj', ',field']], ',right']], 
+  	 	['.&', ['.set', ['.trivial', ['.', ',obj', ',field']], ',right']], 
+  	 	['.&', ['.set', ['.', ',obj', ',field'], ',right']],
+  	 	['.set', ['.', ',obj', ',field'], ',right'],
+  	 	['.set', ['.trivial', ['.', ',obj', ',field']], ',right'], 
+  	 	function (form, env, k){
+  	 		var $obj = this.obj, $field = this.field, $right = this.right;
+  	 		return ra($obj, env, function(xl){
+  	 			return ra($field, env, function(xr){
+  	 				return re($right, env, function(r){
+  	 					return k(['.set', ['.', xl, xr], r])
+  	 				})
+  	 			})
+  	 		})
+  	 	}],
+  	[	['.&', ['.set', ['.trivial', ',left'], ',right']],
+  	 	['.&', ['.set', ',left', ',right']], 
+  	 	['.set', ['.trivial', ',left'], ',right'], 
+  	 	['.set', ',left', ',right'], 
+  	 	function (form, env, k){
+  	 		var $left = this.left, $right = this.right;
+  	 		return re($right, env, function(e){ return k(['.set', re($left, env, id), e]) })
+  	 	}],
+  	[	['.&', [['.', ',left', ',right'], ',..args']],
+  	 	['.&', [['.trivial', ['.', ',left', ',right']], ',..args']],
+  	 	['.&', [['.&', ['.', ',left', ',right']], ',..args']], 
+  	 	[['.', ',left', ',right'], ',..args'], 
+  	 	[['.trivial', ['.', ',left', ',right']], ',..args'], 
+  	 	function (form, env, k){
+  	 		var $left = this.left, $right = this.right, $args = this.args;
+  	 		return ra($left, env, function(xl){
+  	 			return re($right, env, function(xr){
+  	 				var t = env.newt();
+  	 				return ['.begin', ['.set', t, ['.', xl, xr]], re$($args, env, function(x$){
+  	 					if(x$) return k([['.', t, ['.quote', 'call']], xl].concat(x$))
+  	 					else return k([['.', t, ['.quote', 'call']], xl])
+  	 				})]
+  	 			})
+  	 		})
+  	 	}],
+  	[	['.&', ['.hash', ',..pairs']],
+  	 	['.hash', ',..pairs'],
+  	 	function(form, env, k){
+  	 		var $keys = this.pairs.map(KEY);
+  	 		var $values = this.pairs.map(VAL);
+  	 		return re$($values, env, function(x$){
+  	 			var a = [];
+  	 			for(var j = 0; j < $keys.length; j++){
+  	 				a[j] = [$keys[j], x$[j]]
+  	 			};
+  	 			return k(['.hash'].concat(a));
+  	 		})
+  	 	}],
+  	[['.&', ['&&']], function(form, env, k){ return k(['.quote', true]) }],
+  	[['.&', ['&&', ',x']], function(form, env, k){ return re(this.x, env, k) }],
+  	[['.&', ['&&', ',x', ',..rest']], function(form, env, k){
+  		var $rest = this.rest;
+  		return ra(this.x, env, function(x){
+  			var t = env.newt();
+  			var tx = env.newt();
+  			return ['.begin', 
+  				['.set', t, ['.lambda', [tx], k(tx)]],
+  				['.if', x, re(['.&', ['&&'].concat($rest)], env, function(x){ return ['.return', [t, x]] }), ['.return', [t, x]]]
+  			]
+  		})
+  	}],
+  	[['.&', ['||']], function(form, env, k){ return k(['.quote', false]) }],
+  	[['.&', ['||', ',x']], function(form, env, k){ return re(this.x, env, k) }],
+  	[['.&', ['||', ',x', ',..rest']], function(form, env, k){
+  		var $rest = this.rest;
+  		return ra(this.x, env, function(x){
+  			var t = env.newt();
+  			var tx = env.newt();
+  			return ['.begin', 
+  				['.set', t, ['.lambda', [tx], k(tx)]],
+  				['.if', x, ['.return', [t, x]], re(['.&', ['||'].concat($rest)], env, function(x){ return ['.return', [t, x]] })]
+  			]
+  		})
+  	}],
+  	[['&&'], function(form, env, k){ return k(['.quote', true]) }],
+  	[['&&', ',x'], function(form, env, k){ return re(this.x, env, k) }],
+  	[['&&', ',x', ',..rest'], function(form, env, k){
+  		var $rest = this.rest;
+  		return ra(this.x, env, function(x){
+  			var t = env.newt();
+  			return ['.begin', 
+  				['.if', x, re(['.&', ['&&'].concat($rest)], env, function(x){ return ['.set', t, x] }), ['.set', t, x]],
+  				k(t)
+  			]
+  		})
+  	}],
+  	[['||'], function(form, env, k){ return k(['.quote', false]) }],
+  	[['||', ',x'], function(form, env, k){ return re(this.x, env, k) }],
+  	[['||', ',x', ',..rest'], function(form, env, k){
+  		var $rest = this.rest;
+  		return ra(this.x, env, function(x){
+  			var t = env.newt();
+  			return ['.begin', 
+  				['.if', x, ['.set', t, x], re(['.&', ['||'].concat($rest)], env, function(x){ return ['.set', t, x] })],
+  				k(t),
+  			]
+  		})
+  	}],
+  	[	['.&', [_('operator', prim), ',..args']],
+  	 	[_('operator', prim), ',..args'],
+  	 	function(form, env, k){
+  	 		var $operator = this.operator, $args = this.args;
+  	 		return re$($args, env, function(x$){
+  	 			return k([$operator].concat(x$))
+  	 		})
+  	 	}],
+  	[	['.&', [',callee', ',..args']], 
+  	 	[',callee', ',..args'], 
+  	 	function(form, env, k){
+  	 		var $args = this.args, $callee = this.callee;
+  	 		return ra($callee, env, function(x0){
+  	 			return re$($args, env, function(x$){
+  	 				return k([x0].concat(x$))
+  	 			})
+  	 		})
+  	 	}],
 //	[['.&', _('x', atom)], function(form, env, k){ return k(this.x) }],
 //	[['.&', _('x', ['.t', ',name'])], function(form, env, k){ return k(this.x) }],
-	[any, function(form, env, k){ return k(form) }]
+  	[any, function(form, env, k){ return k(form) }]
 );
 
 function ra(form, env, k){
@@ -721,8 +721,8 @@ function mb(form){
 }
 
 exports.pass = function(form, globals){
-	globals.exitK = id;
-	var tf = trivial(form)
+  	globals.exitK = id;
+  	var tf = trivial(form)
 //	console.log(require('util').inspect(tf, {depth: null}));
-	return mb(rs(tf, globals, id))
+  	return mb(rs(tf, globals, id))
 }

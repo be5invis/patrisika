@@ -19,6 +19,8 @@ exports.DefaultExterns = function(){
 	externs.declare('RegExp')
 	externs.declare('Function')
 	externs.declare('Error')
+	externs.declare('Date')
+	externs.declare('Array')
 	externs.declare('Math')
 	externs.declare('alert')
 	externs.declare('console')
