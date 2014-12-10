@@ -48,6 +48,18 @@ Represents a ES6 `yield` expression. Any functions directly containing such node
 ### ['.beta', [...params], body, ...args]
 Represents a beta redex which is similar to `[['.lambda', [...params], body], ...args]`, used to implement semantics of `let` in scheme.
 
+Usage
+-----------------------------------
+Using Patrisika is pretty simple and straight forward:
+
+```javascript
+// Note : global scopes must be provided. Undeclared variables in Patrisika
+//        are treated as local variables, instead of global.
+var globalScope = new Patrisika.DefaultExterns;
+globalScope.declare("globalVariable");
+patrisika.compile(ast, globals);
+```
+
 License
 -----------------------------------
 ###Patrisika

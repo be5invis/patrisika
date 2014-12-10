@@ -161,7 +161,7 @@ var rs = syntax_rule(
 				return k(['.while', t, rs(form[2], env, function(x){
 					return ['.begin', x, re(form[1], env, function(x){ return ['.set', t, x]})]
 				})])
-			})			
+			})
 		}
 	}],
 	[['.try', ',block', [',param'], ',handler'], function(form, env, k){
