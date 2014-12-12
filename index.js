@@ -6,8 +6,8 @@ var cdg = require('./passes/codegen').pass;
 
 exports.regularize = deo;
 exports.pat2esc = cdg;
-exports.generate = function(ast, globals){
-	var r = deo(ast, globals);
+exports.generate = function(ast, globals, exitK){
+	var r = deo(ast, globals, exitK);
 	return cdg(r, globals)
 }
 exports.DefaultExterns = function(){

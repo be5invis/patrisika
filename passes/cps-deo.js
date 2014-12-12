@@ -722,9 +722,9 @@ function mb(form){
 	}
 }
 
-exports.pass = function(form, globals){
-  	globals.exitK = id;
+exports.pass = function(form, globals, kExit){
+  	globals.exitK = kExit || id;
   	var tf = trivial(form)
-//	console.log(require('util').inspect(tf, {depth: null}));
+//	process.stderr.write(require('util').inspect(tf, {depth: null}) + '\n');
   	return mb(rs(tf, globals, id))
 }
