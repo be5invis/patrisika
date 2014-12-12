@@ -56,6 +56,12 @@ function buildPattern(pattern){
 	}
 }
 
+function keepBeginsAndEnds(original, translated){
+	if(original && original.begins >= 0 && translated) translated.begins = original.begins
+	if(original && original.ends >= 0 && translated) translated.ends = original.ends
+	return translated
+}
+
 var syntax_rule = function(){
 	var pairs = [].slice.call(arguments, 0).map(function(p){ return p.slice(0, -1).map(buildPattern).concat(p[p.length - 1]) });
 	return function(node, __){
@@ -63,7 +69,7 @@ var syntax_rule = function(){
 			var pair = pairs[j];
 			for(var k = 0; k < pair.length - 1; k++){
 				var w = {};
-				if(pair[k](node, w)) return pair[pair.length - 1].apply(w, arguments)
+				if(pair[k](node, w)) return keepBeginsAndEnds(node, pair[pair.length - 1].apply(w, arguments))
 			}
 		}
 	}
@@ -77,3 +83,4 @@ exports.empty = function(x){ return !x }
 exports.any = function(x){ return true }
 exports.prim = function(x){ return exports.atom(x) && (x[0] === '.' || /^\W+$/.test(x) ) && x != '&' && x != '&!' }
 exports.triv = function(x){ return exports.atom(x) || x instanceof Array && (x[0] === '.quote' || x[0] === '.id' || x[0] === '.t' || x[0] === '.unit') }
+exports.keepBeginsAndEnds = keepBeginsAndEnds;

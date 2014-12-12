@@ -4,6 +4,8 @@ var escapeId = require('patrisika-scopes').escapeId;
 var deo = require('./passes/cps-deo').pass;
 var cdg = require('./passes/codegen').pass;
 
+exports.regularize = deo;
+exports.pat2esc = cdg;
 exports.generate = function(ast, globals){
 	var r = deo(ast, globals);
 	return cdg(r, globals)
