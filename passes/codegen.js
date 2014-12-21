@@ -13,8 +13,8 @@ var resolveTemp = require('patrisika-scopes').resolveTemp
 
 var util = require('util');
 
-exports.pass = function(form, globals, lcmap){
-	if(!lcmap) var syntax_rule_withLoc = syntax_rule
+exports.pass = function(form, globals, lcmap) {
+	if(!lcmap) var syntax_rule_withLoc = syntax_rule;
 	else var syntax_rule_withLoc = function(){
 		var fn = syntax_rule.apply(this, arguments);
 		return function(node){
@@ -27,7 +27,8 @@ exports.pass = function(form, globals, lcmap){
 			};
 			return res;
 		}
-	}
+	};
+	var resolutionCache = [];
 	function tb(form){
 		var s = ts(form);
 		if(s.type !== 'BlockStatement') {
@@ -134,18 +135,21 @@ exports.pass = function(form, globals, lcmap){
 
 	var te = syntax_rule_withLoc(
 		[['.lambda', ',args', ',body'], function(form){
+			var params = this.args.map(te)
 			return {
 				type: 'FunctionExpression',
-				params: this.args.map(te),
+				params: params,
 				body: tb(this.body),
 				expression: false,
 				generator: false
 			}
 		}],
 		[['.lambda.scoped', ',args', ',body', ',scope'], function(form){
+			var params = this.args.map(te)
 			var body = tb(this.body);
 			var s = this.scope;
-			var locals = s.locals.map(function(id){
+			var cacheMatch = resolutionCache[s._N];
+			var locals = cacheMatch.locals.map(function(id){
 				return {
 					type: "VariableDeclarator",
 					id: {type: "Identifier", name: s.castName(id)},
@@ -155,7 +159,7 @@ exports.pass = function(form, globals, lcmap){
 			locals = locals.concat(s.temps.map(function(id){
 				return {
 					type: "VariableDeclarator",
-					id: {type: "Identifier", name: resolveTemp(id, s)},
+					id: {type: "Identifier", name: resolveTemp(id, s, resolutionCache)},
 					init: null
 				}
 			}));
@@ -168,7 +172,7 @@ exports.pass = function(form, globals, lcmap){
 			}
 			return {
 				type: 'FunctionExpression',
-				params: this.args.map(te),
+				params: params,
 				body: body,
 				expression: false,
 				generator: false
@@ -180,9 +184,9 @@ exports.pass = function(form, globals, lcmap){
 			return e;
 		}],
 		[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
-		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope) }}],
+		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache) }}],
 		[['.id', ',id', ',scope'], function(form){ 
-			return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope)} 
+			return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope, resolutionCache)} 
 		}],
 		[['.', ',left', ',right'], function(form){
 			return {
