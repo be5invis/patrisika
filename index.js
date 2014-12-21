@@ -4,8 +4,10 @@ var escapeId = require('patrisika-scopes').escapeId;
 var deo = require('./passes/cps-deo').pass;
 var cdg = require('./passes/codegen').pass;
 
-exports.generate = function(ast, globals){
-	var r = deo(ast, globals);
+exports.regularize = deo;
+exports.pat2esc = cdg;
+exports.generate = function(ast, globals, exitK){
+	var r = deo(ast, globals, exitK);
 	return cdg(r, globals)
 }
 exports.DefaultExterns = function(){
@@ -19,6 +21,8 @@ exports.DefaultExterns = function(){
 	externs.declare('RegExp')
 	externs.declare('Function')
 	externs.declare('Error')
+	externs.declare('SyntaxError')
+	externs.declare('TypeError')
 	externs.declare('Date')
 	externs.declare('Array')
 	externs.declare('Math')

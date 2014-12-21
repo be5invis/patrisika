@@ -14,6 +14,8 @@ var triv = require('../commons/match.js').triv;
 
 var Scope = require('patrisika-scopes').Scope;
 
+var keepBeginsAndEnds = require('../commons/match.js').keepBeginsAndEnds;
+
 function isDelaied(form) {
 	return form instanceof Array && (form[0] === '.&' || form[0] === '.&!')
 }
@@ -710,19 +712,19 @@ function mb(form){
 			}
 		};
 		res = res.slice(0, -1).filter(function(x){ return !triv(x) }).concat([res[res.length - 1]])
-		return ['.begin'].concat(res);
+		return keepBeginsAndEnds(form, ['.begin'].concat(res));
 	} else if(form instanceof Array && form[0] === '.trivial') {
-		return mb(form[1])
+		return keepBeginsAndEnds(form, mb(form[1]))
 	} else if(form instanceof Array){
-		return form.map(mb)
+		return keepBeginsAndEnds(form, form.map(mb))
 	} else {
 		return form
 	}
 }
 
-exports.pass = function(form, globals){
-  	globals.exitK = id;
+exports.pass = function(form, globals, kExit){
+  	globals.exitK = kExit || id;
   	var tf = trivial(form)
-//	console.log(require('util').inspect(tf, {depth: null}));
+//	process.stderr.write(require('util').inspect(tf, {depth: null}) + '\n');
   	return mb(rs(tf, globals, id))
 }
