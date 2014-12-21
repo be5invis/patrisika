@@ -1,4 +1,3 @@
-var util = require('util');
 var Scope = require('patrisika-scopes').Scope;
 var escapeId = require('patrisika-scopes').escapeId;
 var deo = require('./passes/cps-deo').pass;
