@@ -1,4 +1,4 @@
-![Patrisika Logo](https://rawgit.com/be5invis/patrisika/7f2783ca91ccaa7481c8ea8c1ed4f0d881ceaff8/resources/patrisika-logo.svg) Patrisika [Revented]
+<img src="https://rawgit.com/be5invis/patrisika/7f2783ca91ccaa7481c8ea8c1ed4f0d881ceaff8/resources/patrisika-logo.svg" height="32" width="32"/> Patrisika [Revented]
 ===================================
 
 An library converts orthogonal AST into SpiderMonkey AST.
