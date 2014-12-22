@@ -4,8 +4,7 @@
 	"description": "An AST library",
 	"repository": "https://github.com/be5invis/patrisika",
 	"dependencies": {
-		"patrisika-scopes": ">=0.7.0",
-		"escodegen": ">=1.1.0"
+		"patrisika-scopes": ">=0.7.0"
 	},
 	"main": "./index.js"
 }
