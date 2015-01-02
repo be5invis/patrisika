@@ -21,7 +21,6 @@ function isDelaied(form) {
 }
 
 function FormInvalidError(form, reason){
-	var s4_form, s4_reason, _s4_t0, _s4_t1;
 	this.reason = reason;
 	this.message = reason;
 	this.relatedForm = form;
@@ -31,13 +30,45 @@ function FormInvalidError(form, reason){
 		this.message += '\nAround (' + form.begins + ' -- ' + form.ends + ')'
 	}
 }
-FormInvalidError.prototype = Object.create(Error.prototype)
+FormInvalidError.prototype = Object.create(Error.prototype);
+
+function reject(form){ throw new FormInvalidError(form, "Invalid form")};
+function uniop(op){ return [op, ',x'] }
+function binop(op){ return [op, ',x', ',..y'] }
+function logop(op){ return [op, ',..x'] }
 
 function RET(x){ return ['.return', x] }
 function KEY(x){ return x[0] };
 function VAL(x){ return x[1] };
 
 // Optimization: Find out all trivial subforms.
+// Note: this pass will reject invalid forms for several primitices
+function trivial$(j0){
+	return function(form){
+		if(!j0 && prim(form[0])) process.stderr.write(require('util').inspect(form) + '\n')
+		var a = form.slice(0);
+		for(var j = j0; j < form.length; j++){
+			a[j] = trivial(form[j])
+		}
+		var delaied = false;
+		var trivialForm = true;
+		for(var j = j0; j < a.length; j++){
+			if(isDelaied(a[j])) {
+				delaied = true
+			}
+			if(!(a[j] && (a[j][0] === '.trivial'))){
+				trivialForm = false;
+			}
+		};
+		if(delaied){
+			return ['.&', a]
+		} else if(trivialForm){
+			return ['.trivial', a];
+		} else {
+			return a;
+		}
+	}
+}
 var trivial = syntax_rule(
 	[['.lambda', [',..args'], ',body'], function(form){
 		return ['.trivial', ['.lambda', this.args, trivial(this.body)]]
@@ -47,8 +78,8 @@ var trivial = syntax_rule(
 	}],
 	[['.quote', ',x'], function(form){ return ['.trivial', form] }],
 	[['.t', ',name'], function(form){ return ['.trivial', form] }],
-	[['.id', ',name', ',scope'], function(form){ return ['.trivial', form] }],
 	[['.t', ',name', ',scope'], function(form){ return ['.trivial', form] }],
+	[['.id', ',name', ',scope'], function(form){ return ['.trivial', form] }],
 	[['.unit'], function(form){ return ['.trivial', form] }],
 	[['.thisp'], function(form){ return ['.trivial', form] }],
 	[['.argsp'], function(form){ return ['.trivial', form] }],
@@ -78,11 +109,12 @@ var trivial = syntax_rule(
 		};
 		return a;
 	}],
-	[['.if', ',..args'],
+	[['.if', ',condition', ',consequent'],
+	 ['.if', ',condition', ',consequent', ',alternate'],
 	 ['.begin', ',..args'],
-	 ['.while', ',..args'],
-	 ['.return', ',..args'], 
-	 ['.throw', ',..args'], function(form){ 
+	 ['.while', ',test', ',body'],
+	 ['.return', ',x'], 
+	 ['.throw', ',x'], function(form){ 
 		var a = [form[0]];
 		for(var j = 1; j < form.length; j++){
 			a[j] = trivial(form[j])
@@ -123,30 +155,34 @@ var trivial = syntax_rule(
 			return a;
 		}
 	}],
-	[[',..call'], function(form){
-		var j0 = prim(form[0]) ? 1 : 0;
-		var a = form.slice(0);
-		for(var j = j0; j < form.length; j++){
-			a[j] = trivial(form[j])
-		}
-		var delaied = false;
-		var trivialForm = true;
-		for(var j = j0; j < a.length; j++){
-			if(isDelaied(a[j])) {
-				delaied = true
-			}
-			if(!(a[j] && (a[j][0] === '.trivial'))){
-				trivialForm = false;
-			}
-		};
-		if(delaied){
-			return ['.&', a]
-		} else if(trivialForm){
-			return ['.trivial', a];
-		} else {
-			return a;
-		}
-	}],
+	[['.set', ',left', ',right'],
+	 ['.new', ',callee', ',..args'],
+	 ['.list', ',..items'],
+	 ['.', ',left', ',right'],
+	 uniop('.typeof'),
+	 uniop('!'),
+	 uniop('+'),
+	 uniop('-'),
+	 binop('+'),
+	 binop('-'),
+	 binop('*'),
+	 binop('/'),
+	 binop('%'),
+	 binop('<'),
+	 binop('>'),
+	 binop('<='),
+	 binop('>='),
+	 binop('=='),
+	 binop('!='),
+	 binop('==='),
+	 binop('!=='),
+	 binop('=~'),
+	 binop('!~'),
+	 binop('.is'),
+	 logop('&&'),
+	 logop('||'), trivial$(1)],
+	[[_('op', prim), ',..any'], reject],
+	[[',callee', ',..args'], trivial$(0)],
 	[atom, function(form){ 
 		if(/^\W/.test(form)) return form
 		else return ['.trivial', form]
