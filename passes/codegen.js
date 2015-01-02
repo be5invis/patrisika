@@ -230,6 +230,8 @@ exports.pass = function(form, globals, lcmap) {
 		binop('!=', '!=='),
 		binop('===', '==='),
 		binop('!==', '!=='),
+		binop('=~', '=='),
+		binop('!~', '!='),
 		binop('.is', 'instanceof'),
 		logop('&&'),
 		logop('||'),
