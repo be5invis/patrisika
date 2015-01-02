@@ -147,13 +147,18 @@ exports.pass = function(form, globals, lcmap) {
 			var body = tb(this.body);
 			var s = this.scope;
 			var cacheMatch = resolutionCache[s._N];
-			var locals = cacheMatch.locals.map(function(id){
-				return {
-					type: "VariableDeclarator",
-					id: {type: "Identifier", name: s.castName(id)},
-					init: null
-				}
-			});
+			if(cacheMatch) {
+				var locals = cacheMatch.locals.map(function(id){
+					return {
+						type: "VariableDeclarator",
+						id: {type: "Identifier", name: s.castName(id)},
+						init: null
+					}
+				});
+			} else {
+				var locals = [];
+			}
+
 			locals = locals.concat(s.temps.map(function(id){
 				return {
 					type: "VariableDeclarator",
@@ -225,6 +230,8 @@ exports.pass = function(form, globals, lcmap) {
 		binop('!=', '!=='),
 		binop('===', '==='),
 		binop('!==', '!=='),
+		binop('=~', '=='),
+		binop('!~', '!='),
 		binop('.is', 'instanceof'),
 		logop('&&'),
 		logop('||'),

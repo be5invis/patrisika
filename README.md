@@ -47,6 +47,29 @@ Initiates an instance of constructor `callee`, with `args` as arguments.
 Represents a ES6 `yield` expression. Any functions directly containing such node will become a generator function described in ES6 specification.
 ### ['.beta', [...params], body, ...args]
 Represents a beta redex which is similar to `[['.lambda', [...params], body], ...args]`, used to implement semantics of `let` in scheme.
+### Operators
+- Unary operator
+  - `['.typeof', x]` : `typeof`
+  - `['!', x]` : `!`
+  - `['+', x]` : `+`
+  - `['-', x]` : `-`
+- Binary and Logical operator
+  - `['+', x, y]` : `+` (both numeric and string)
+  - `['-', x, y]` : `-`
+  - `['*', x, y]` : `*`
+  - `['/', x, y]` : `/`
+  - `['%', x, y]` : `%`
+  - `['<', x, y]` : `<`
+  - `['>', x, y]` : `>`
+  - `['<=', x, y]` : `<=`
+  - `['>=', x, y]` : `>=`
+  - `['===', x, y]` : `===`
+  - `['!==', x, y]` : `!==`
+  - `['=~', x, y]` : `==`
+  - `['!~', x, y]` : `!=`
+  - `['.is', x, y]` : `instanceof`
+  - `['&&', x, y]` : `&&`
+  - `['||', x, y]` : `||`
 
 Usage
 -----------------------------------
