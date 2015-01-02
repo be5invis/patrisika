@@ -76,13 +76,15 @@ var trivial = syntax_rule(
 	[['.lambda.scoped', [',..args'], ',body', ',scope'], function(form){
 		return ['.trivial', ['.lambda.scoped', this.args, trivial(this.body), this.scope]]
 	}],
-	[['.quote', ',x'], function(form){ return ['.trivial', form] }],
-	[['.t', ',name'], function(form){ return ['.trivial', form] }],
-	[['.t', ',name', ',scope'], function(form){ return ['.trivial', form] }],
-	[['.id', ',name', ',scope'], function(form){ return ['.trivial', form] }],
-	[['.unit'], function(form){ return ['.trivial', form] }],
-	[['.thisp'], function(form){ return ['.trivial', form] }],
-	[['.argsp'], function(form){ return ['.trivial', form] }],
+	[['.quote', ',x'],
+	 ['.t', _('id', atom)],
+	 ['.t', _('id', atom), ',scope'],
+	 ['.id', _('id', atom)],
+	 ['.id', _('id', atom), ',scope'],
+	 ['.local', _('id', atom)],
+	 ['.unit'],
+	 ['.thisp'],
+	 ['.argsp'], function(form){ return ['.trivial', form] }],
 	[['.yield', ',x'], function(form){ return ['.&!', trivial(this.x)] }],
 	[['.beta', ',args', ',body', ',..params'], function(form){
 		var a = ['.beta', this.args];
