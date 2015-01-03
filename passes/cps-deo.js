@@ -764,7 +764,7 @@ function mb(form){
 				res.push(a[j])
 			}
 		};
-		res = res.slice(0, -1).filter(function(x){ return !triv(x) }).concat([res[res.length - 1]])
+		res = res.filter(function(x){ return !triv(x) })
 		return keepBeginsAndEnds(form, ['.begin'].concat(res));
 	} else if(form instanceof Array && form[0] === '.trivial') {
 		return keepBeginsAndEnds(form, mb(form[1]))

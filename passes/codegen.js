@@ -26,8 +26,10 @@ exports.pass = function(form, globals, lcmap) {
 			return res;
 		}
 	};
+
+	var holdingTasks = [];
 	var resolutionCache = [];
-	function tb(form){
+	function tb(form) {
 		var s = ts(form);
 		if(s.type !== 'BlockStatement') {
 			return {
@@ -62,10 +64,18 @@ exports.pass = function(form, globals, lcmap) {
 			}
 		}],
 		[['.while', ',test', ',body'], function(form){
+			var test = te(this.test);
+			var body = ts(this.body);
+			var update = null;
+			if(body.type === 'BlockStatement' && body.body.length > 1 && body.body[body.body.length - 1] && body.body[body.body.length - 1].type === 'ExpressionStatement') {
+				update = body.body.pop().expression
+			}
 			return {
-				type: 'WhileStatement',
-				test: te(this.test),
-				body: ts(this.body)
+				type: 'ForStatement',
+				init: null,
+				test: test,
+				update: update,
+				body: body
 			}
 		}],
 		[['.try', ',block', [',param'], ',handler'], function(form){
@@ -133,53 +143,59 @@ exports.pass = function(form, globals, lcmap) {
 
 	var te = syntax_rule_withLoc(
 		[['.lambda', ',args', ',body'], function(form){
-			var params = this.args.map(te)
-			return {
-				type: 'FunctionExpression',
-				params: params,
-				body: tb(this.body),
-				expression: false,
-				generator: false
-			}
+			var blank = {}, t = this;
+			holdingTasks.push(function(){
+				blank.type = 'FunctionExpression';
+				blank.params = t.args.map(te);
+				blank.body = tb(t.body);
+				blank.expression = false;
+				blank.generator = false;
+				return blank
+			});
+			return blank;
 		}],
 		[['.lambda.scoped', ',args', ',body', ',scope'], function(form){
-			var params = this.args.map(te)
-			var body = tb(this.body);
-			var s = this.scope;
-			var cacheMatch = resolutionCache[s._N];
-			if(cacheMatch) {
-				var locals = cacheMatch.locals.map(function(id){
+			var blank = {}, t = this;
+			holdingTasks.push(function(){
+				var params = t.args.map(te)
+				var body = tb(t.body);
+				var s = t.scope;
+				var cacheMatch = resolutionCache[s._N];
+				if(cacheMatch) {
+					var locals = cacheMatch.locals.map(function(id){
+						return {
+							type: "VariableDeclarator",
+							id: {type: "Identifier", name: s.castName(id)},
+							init: null
+						}
+					});
+				} else {
+					var locals = [];
+				}
+
+				locals = locals.concat(s.temps.map(function(id){
 					return {
 						type: "VariableDeclarator",
-						id: {type: "Identifier", name: s.castName(id)},
+						id: {type: "Identifier", name: resolveTemp(id, s, resolutionCache)},
 						init: null
 					}
-				});
-			} else {
-				var locals = [];
-			}
+				}));
+				if(locals.length){
+					body.body.unshift({
+						type: "VariableDeclaration",
+						kind: "var",
+						declarations: locals
+					});
+				};
+				blank.type = 'FunctionExpression';
+				blank.params = params;
+				blank.body = body;
+				blank.expression = false;
+				blank.generator = false;
+				return blank
+			});
+			return blank;
 
-			locals = locals.concat(s.temps.map(function(id){
-				return {
-					type: "VariableDeclarator",
-					id: {type: "Identifier", name: resolveTemp(id, s, resolutionCache)},
-					init: null
-				}
-			}));
-			if(locals.length){
-				body.body.unshift({
-					type: "VariableDeclaration",
-					kind: "var",
-					declarations: locals
-				});
-			}
-			return {
-				type: 'FunctionExpression',
-				params: params,
-				body: body,
-				expression: false,
-				generator: false
-			}
 		}],
 		[['.lambda.scoped', ',args', ',body', ',scope', ',id'], function(form){
 			var e = te(form.slice(0, -1));
@@ -282,6 +298,9 @@ exports.pass = function(form, globals, lcmap) {
 	);
 
 
-	var s = te(['.lambda.scoped', [], form, globals]).body;
-	return s;
+	var s = te(['.lambda.scoped', [], form, globals]);
+	while(holdingTasks.length) {
+		holdingTasks.shift()();
+	}
+	return s.body;
 };
