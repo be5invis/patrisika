@@ -180,6 +180,24 @@ exports.pass = function(form, globals, lcmap) {
 						init: null
 					}
 				}));
+				if(cacheMatch) for(var j = 0; j < cacheMatch.hangingSubscopes.length; j++){
+					var hss = cacheMatch.hangingSubscopes[j];
+					if(resolutionCache[hss._N]) {
+						locals = locals.concat(resolutionCache[hss._N].locals.map(function(id){
+							return {
+							 	type: "VariableDeclarator",
+							 	id: {type: "Identifier", name: hss.castName(id)},
+							 	init: null
+							}						
+						}), hss.temps.map(function(id){
+							return {
+							 	type: "VariableDeclarator",
+							 	id: {type: "Identifier", name: resolveTemp(id, hss, resolutionCache)},
+							 	init: null
+							}					
+						}))
+					}
+				};
 				if(locals.length){
 					body.body.unshift({
 						type: "VariableDeclaration",

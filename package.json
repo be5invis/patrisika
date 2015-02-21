@@ -1,10 +1,10 @@
 {
-	"version": "0.13.2",
+	"version": "0.15.0",
 	"name": "patrisika",
 	"description": "An AST library",
 	"repository": "https://github.com/be5invis/patrisika",
 	"dependencies": {
-		"patrisika-scopes": ">=0.7.0"
+		"patrisika-scopes": ">=0.8.0"
 	},
 	"main": "./index.js"
 }
