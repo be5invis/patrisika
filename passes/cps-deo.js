@@ -776,8 +776,8 @@ function mb(form){
 }
 
 exports.pass = function(form, globals, kExit, expressionary){
-	globals.exitK = kExit || id;
-	var tf = trivial(form)
+  	globals.exitK = kExit || id;
+  	var tf = trivial(form)
 //	process.stderr.write(require('util').inspect(tf, {depth: null}) + '\n');
-	return mb((expressionary ? ra : rs)(tf, globals, globals.exitK))
+  	return mb((expressionary ? ra : rs)(tf, globals, globals.exitK))
 }
