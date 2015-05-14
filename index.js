@@ -3,6 +3,7 @@ var escapeId = require('patrisika-scopes').escapeId;
 var deo = require('./passes/cps-deo').pass;
 var cdg = require('./passes/codegen').pass;
 
+exports.FormInvalidError = require('./commons/formerror.js').FormInvalidError;
 exports.regularize = deo;
 exports.pat2esc = cdg;
 exports.generate = function(ast, globals, exitK){

@@ -15,22 +15,12 @@ var triv = require('../commons/match.js').triv;
 var Scope = require('patrisika-scopes').Scope;
 
 var keepBeginsAndEnds = require('../commons/match.js').keepBeginsAndEnds;
+var FormInvalidError = require('../commons/formerror.js').FormInvalidError
 
 function isDelaied(form) {
 	return form instanceof Array && (form[0] === '.&' || form[0] === '.&!')
 }
 
-function FormInvalidError(form, reason){
-	this.reason = reason;
-	this.message = reason;
-	this.relatedForm = form;
-	if(form && form.begins >= 0 && form.ends >= 0){
-		this.begins = form.begins;
-		this.ends = form.ends;
-		this.message += '\nAround (' + form.begins + ' -- ' + form.ends + ')'
-	}
-}
-FormInvalidError.prototype = Object.create(Error.prototype);
 
 function reject(form){ throw new FormInvalidError(form, "Invalid form")};
 function uniop(op){ return [op, ',x'] }

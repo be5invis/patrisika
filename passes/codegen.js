@@ -11,16 +11,7 @@ var ref = require('../commons/match.js').ref;
 var resolveIdentifier = require('patrisika-scopes').resolveIdentifier
 var resolveTemp = require('patrisika-scopes').resolveTemp
 
-function FormInvalidError(form, reason){
-	this.reason = reason;
-	this.message = reason;
-	this.relatedForm = form;
-	if(form && form.begins >= 0 && form.ends >= 0){
-		this.begins = form.begins;
-		this.ends = form.ends;
-		this.message += '\nAround (' + form.begins + ' -- ' + form.ends + ')'
-	}
-}
+var FormInvalidError = require('../commons/formerror.js').FormInvalidError
 
 exports.pass = function(form, globals, lcmap) {
 	if(!lcmap) var syntax_rule_withLoc = syntax_rule;
