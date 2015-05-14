@@ -11,6 +11,8 @@ var ref = require('../commons/match.js').ref;
 var resolveIdentifier = require('patrisika-scopes').resolveIdentifier
 var resolveTemp = require('patrisika-scopes').resolveTemp
 
+var FormInvalidError = require('../commons/formerror.js').FormInvalidError
+
 exports.pass = function(form, globals, lcmap) {
 	if(!lcmap) var syntax_rule_withLoc = syntax_rule;
 	else var syntax_rule_withLoc = function(){
@@ -311,7 +313,7 @@ exports.pass = function(form, globals, lcmap) {
 		}],
 		[atom, function(form){ return { type: 'Identifier', name: form } }],
 		[any, function(form){
-			throw new Error('Unknown node type ' + form)
+			throw new FormInvalidError(form, "Unknown Node Type")
 		}]
 	);
 
