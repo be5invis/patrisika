@@ -32,6 +32,10 @@ exports.DefaultExterns = function(){
 	externs.declare('setInterval')
 	externs.declare('setTimeout')
 	externs.declare('JSON')
+	externs.declare('escape')
+	externs.declare('unescape')
+	externs.declare('encodeURIComponent')
+	externs.declare('decodeURIComponent')
 
 	return externs;
 };

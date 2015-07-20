@@ -193,10 +193,10 @@ exports.pass = function(form, globals, lcmap) {
 							}						
 						}), hss.temps.map(function(id){
 							return {
-							 	type: "VariableDeclarator",
-							 	id: {type: "Identifier", name: resolveTemp(id, hss, resolutionCache)},
-							 	init: null
-							}					
+								type: "VariableDeclarator",
+								id: {type: "Identifier", name: resolveTemp(id, hss, resolutionCache)},
+								init: null
+							}
 						}))
 					}
 				};
@@ -225,7 +225,7 @@ exports.pass = function(form, globals, lcmap) {
 		[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
 		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache) }}],
 		[['.id', ',id', ',scope'], function(form){ 
-			return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope, resolutionCache)} 
+			return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope, resolutionCache, globals.strict) }
 		}],
 		[['.', ',left', ',right'], function(form){
 			return {
