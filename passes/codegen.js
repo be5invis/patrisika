@@ -178,7 +178,7 @@ exports.pass = function(form, globals, lcmap) {
 				locals = locals.concat(s.temps.map(function(id){
 					return {
 						type: "VariableDeclarator",
-						id: {type: "Identifier", name: resolveTemp(id, s, resolutionCache)},
+						id: {type: "Identifier", name: resolveTemp(id, s, resolutionCache, globals.strict)},
 						init: null
 					}
 				}));
@@ -194,7 +194,7 @@ exports.pass = function(form, globals, lcmap) {
 						}), hss.temps.map(function(id){
 							return {
 								type: "VariableDeclarator",
-								id: {type: "Identifier", name: resolveTemp(id, hss, resolutionCache)},
+								id: {type: "Identifier", name: resolveTemp(id, hss, resolutionCache, globals.strict)},
 								init: null
 							}
 						}))
@@ -223,7 +223,7 @@ exports.pass = function(form, globals, lcmap) {
 			return e;
 		}],
 		[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
-		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache) }}],
+		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache, globals.strict) }}],
 		[['.id', ',id', ',scope'], function(form){ 
 			return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope, resolutionCache, globals.strict) }
 		}],
