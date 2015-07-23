@@ -441,14 +441,13 @@ exports.pass = function(form, globals, kExit, expressionary) {
 					};
 				} else {
 					derived.exitK = RET;
-				}
-				var body = re(b, derived, derived.exitK)
-				if(derived.tThis){
-					body = ['.begin', ['.set', derived.tThis, ['.thisp']], body];
-				}
-				if(derived.tArgs){
-					body = ['.begin', ['.set', derived.tArgs, ['.argsp']], body];
-				}
+				};
+				derived.thisBindStatement = ['.unit']
+				derived.argsBindStatement = ['.unit']
+				derived.tThis = derived.newt();
+				derived.tArgs = derived.newt();
+				var body = re(b, derived, derived.exitK);
+				body = ['.begin', derived.thisBindStatement, derived.argsBindStatement, body];
 				if(derived.isGenerator){
 					return k(['.lambda.scoped', args, ['.begin', 
 						['.set', derived.tStep, ['.lambda', [], body]],
@@ -573,13 +572,19 @@ exports.pass = function(form, globals, kExit, expressionary) {
 				return k(env.use(this.x))
 			}],
 		[	['.trivial', ['.thisp']],	['.thisp'], 
-			function(form, env, k){ 
+			function(form, env, k){
 				if(!env.tThis) env.tThis = env.newt()
+				env.thisBindStatement[0] = '.set'
+				env.thisBindStatement[1] = env.tThis
+				env.thisBindStatement[2] = ['.thisp']
 				return k(env.tThis)
 			}],
 		[	['.trivial', ['.argsp']],	['.argsp'], 
-			function(form, env, k){ 
+			function(form, env, k){
 				if(!env.tArgs) env.tArgs = env.newt()
+				env.thisBindStatement[0] = '.set'
+				env.thisBindStatement[1] = env.tArgs
+				env.thisBindStatement[2] = ['.argsp']
 				return k(env.tArgs)
 			}],
 		[	['.trivial', ['.unit']],	['.unit'], 
