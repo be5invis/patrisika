@@ -442,8 +442,8 @@ exports.pass = function(form, globals, kExit, expressionary) {
 				} else {
 					derived.exitK = RET;
 				};
-				derived.thisBindStatement = ['.unit']
-				derived.argsBindStatement = ['.unit']
+				derived.thisBindStatement = ['.unit'];
+				derived.argsBindStatement = ['.unit'];
 				derived.tThis = derived.newt();
 				derived.tArgs = derived.newt();
 				var body = re(b, derived, derived.exitK);
@@ -573,18 +573,18 @@ exports.pass = function(form, globals, kExit, expressionary) {
 			}],
 		[	['.trivial', ['.thisp']],	['.thisp'], 
 			function(form, env, k){
-				if(!env.tThis) env.tThis = env.newt()
-				env.thisBindStatement[0] = '.set'
-				env.thisBindStatement[1] = env.tThis
-				env.thisBindStatement[2] = ['.thisp']
+				if(!env.tThis) env.tThis = env.newt();
+				env.thisBindStatement[0] = '.set';
+				env.thisBindStatement[1] = env.tThis;
+				env.thisBindStatement[2] = ['.thisp'];
 				return k(env.tThis)
 			}],
 		[	['.trivial', ['.argsp']],	['.argsp'], 
 			function(form, env, k){
-				if(!env.tArgs) env.tArgs = env.newt()
-				env.thisBindStatement[0] = '.set'
-				env.thisBindStatement[1] = env.tArgs
-				env.thisBindStatement[2] = ['.argsp']
+				if(!env.tArgs) env.tArgs = env.newt();
+				env.argsBindStatement[0] = '.set';
+				env.argsBindStatement[1] = env.tArgs;
+				env.argsBindStatement[2] = ['.argsp'];
 				return k(env.tArgs)
 			}],
 		[	['.trivial', ['.unit']],	['.unit'], 
