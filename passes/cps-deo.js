@@ -100,6 +100,7 @@ var trivial = syntax_rule(
 		};
 		return a;
 	}],
+	[['.begin', ',a'], function(form){ return trivial(form[1]) }],
 	[['.if', ',condition', ',consequent'],
 	 ['.if', ',condition', ',consequent', ',alternate'],
 	 ['.begin', ',..args'],
