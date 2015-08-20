@@ -14,10 +14,13 @@ var resolveTemp = require('patrisika-scopes').resolveTemp
 var FormInvalidError = require('../commons/formerror.js').FormInvalidError
 
 exports.pass = function(form, globals, lcmap) {
+	var lastNode;
+	
 	if(!lcmap) var syntax_rule_withLoc = syntax_rule;
 	else var syntax_rule_withLoc = function(){
 		var fn = syntax_rule.apply(this, arguments);
 		return function(node){
+			if(node.begins >= 0 && node.ends >= 0) lastNode = node;
 			var res = fn.apply(this, arguments);
 			if(node && node.begins >= 0 && node.ends >= 0){
 				res.loc = {
@@ -224,8 +227,16 @@ exports.pass = function(form, globals, lcmap) {
 		}],
 		[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
 		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache, globals.strict) }}],
-		[['.id', ',id', ',scope'], function(form){ 
-			return { type: 'Identifier', name: resolveIdentifier(this.id, this.scope, resolutionCache, globals.strict) }
+		[['.id', ',id', ',scope'], function(form){
+			var match = resolveIdentifier(this.id, this.scope, resolutionCache, globals.strict);
+			var name = match.belongs.castName(this.id);
+			if(globals.strict && resolutionCache.undeclareds && resolutionCache.undeclareds.has(this.id)){
+				var entries = resolutionCache.undeclareds.get(this.id);
+				for(var j = 0; j < entries.length; j++) if(entries[j].belongs === this.scope && !entries[j].firstUse){
+					entries[j].firstUse = lastNode
+				}
+			}
+			return { type: 'Identifier', name: name }
 		}],
 		[['.', ',left', ',right'], function(form){
 			return {
@@ -317,10 +328,26 @@ exports.pass = function(form, globals, lcmap) {
 		}]
 	);
 
-
 	var s = te(['.lambda.scoped', [], form, globals]);
 	while(holdingTasks.length) {
 		holdingTasks.shift()();
+	};
+	if(globals.strict && resolutionCache.undeclareds){
+		var ex = new Error();
+		ex.suberrors = [];
+		resolutionCache.undeclareds.forEachOwn(function(key, entries){
+			for(var j = 0; j < entries.length; j++){
+				var subex = new Error();
+				subex.message = "Undeclared variable " + key;
+				if(entries[j].firstUse){
+					subex.within = entries[j].firstUse.within
+					subex.begins = entries[j].firstUse.begins
+					subex.ends = entries[j].firstUse.ends
+				}
+				ex.suberrors.push(subex);
+			}
+		});
+		throw ex;
 	}
 	return s.body;
 };
