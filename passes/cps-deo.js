@@ -66,6 +66,7 @@ var trivial = syntax_rule(
 		return ['.trivial', ['.lambda.scoped', this.args, trivial(this.body), this.scope]]
 	}],
 	[['.quote', ',x'],
+	 ['.exotic', ',x'],
 	 ['.t', _('id', atom)],
 	 ['.t', _('id', atom), ',scope'],
 	 ['.id', _('id', atom)],
@@ -567,7 +568,8 @@ exports.pass = function(form, globals, kExit, expressionary) {
 			}],
 		[	['.trivial', ['.quote', ',x']],	['.quote', ',x'],
 			['.trivial', ['.id', ',..x']],	['.id', ',..x'],
-			['.trivial', ['.t', ',..x']],	['.t', ',..x'], 
+			['.trivial', ['.t', ',..x']],	['.t', ',..x'],
+			['.trivial', ['.exotic', ',..x'], ['.exotic', ',..x']],
 			function(form, env, k){ return k(form) }],
 		[	['.trivial', ['.local', ['.trivial', _('x', atom)]]],	['.local', ['.trivial', _('x', atom)]],
 			['.trivial', ['.local', _('x', atom)]],           	['.local', _('x', atom)],

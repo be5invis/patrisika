@@ -317,6 +317,7 @@ exports.pass = function(form, globals, lcmap) {
 				arguments: this.args.map(te)
 			}
 		}],
+		[['.exotic', ',ast'], function(form){ return form[1] }],
 		[[',callee', ',..args'], function(form){
 			return {
 				type: 'CallExpression',
