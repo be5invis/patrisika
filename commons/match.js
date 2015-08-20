@@ -57,9 +57,10 @@ function buildPattern(pattern){
 }
 
 function keepBeginsAndEnds(original, translated){
-	if(original && original.within && translated) translated.within = original.within
-	if(original && original.begins >= 0 && translated) translated.begins = original.begins
-	if(original && original.ends >= 0 && translated) translated.ends = original.ends
+	//console.log(">>", original, translated);
+	if(original && original.within && translated) translated.within = original.within;
+	if(original && original.begins >= 0 && translated) translated.begins = original.begins;
+	if(original && original.ends >= 0 && translated) translated.ends = original.ends;
 	return translated
 }
 

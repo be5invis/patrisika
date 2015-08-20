@@ -20,7 +20,8 @@ exports.pass = function(form, globals, lcmap) {
 	else var syntax_rule_withLoc = function(){
 		var fn = syntax_rule.apply(this, arguments);
 		return function(node){
-			if(node.begins >= 0 && node.ends >= 0) lastNode = node;
+			var t = lastNode;
+			if(node && node.begins >= 0 && node.ends >= 0) lastNode = node;
 			var res = fn.apply(this, arguments);
 			if(node && node.begins >= 0 && node.ends >= 0){
 				res.loc = {
@@ -28,6 +29,7 @@ exports.pass = function(form, globals, lcmap) {
 					end: { line: lcmap.line[node.ends], column: lcmap.column[node.ends] }
 				}
 			};
+			lastNode = t;
 			return res;
 		}
 	};
@@ -315,6 +317,7 @@ exports.pass = function(form, globals, lcmap) {
 				arguments: this.args.map(te)
 			}
 		}],
+		[['.exotic', ',ast'], function(form){ return form[1] }],
 		[[',callee', ',..args'], function(form){
 			return {
 				type: 'CallExpression',
