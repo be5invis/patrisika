@@ -635,7 +635,7 @@ exports.pass = function(form, globals, kExit, expressionary) {
 				return ra($obj, env, function(xl){
 					return ra($field, env, function(xr){
 						return re($right, env, function(r){
-							return k(keepBeginsAndEnds(['.set', ['.', xl, xr], r]))
+							return k(keepBeginsAndEnds(form, ['.set', ['.', xl, xr], r]))
 						})
 					})
 				})
