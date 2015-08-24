@@ -227,6 +227,20 @@ exports.pass = function(form, globals, lcmap) {
 			e.id = te(this.id);
 			return e;
 		}],
+		[['.conditional', ',condition', ',consequent', ',alternate'], function(form){
+			return {
+				type: 'ConditionalExpression',
+				test: te(this.condition),
+				consequent: te(this.consequent),
+				alternate: te(this.alternate)
+			}
+		}],
+		[['.seq', ',..xs'], function(form){
+			return {
+				type: 'SequenceExpression',
+				expressions: this.xs.map(te)
+			}
+		}],
 		[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
 		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache, globals.strict) }}],
 		[['.id', ',id', ',scope'], function(form){
