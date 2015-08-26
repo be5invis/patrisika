@@ -227,6 +227,20 @@ exports.pass = function(form, globals, lcmap) {
 			e.id = te(this.id);
 			return e;
 		}],
+		[['.conditional', ',condition', ',consequent', ',alternate'], function(form){
+			return {
+				type: 'ConditionalExpression',
+				test: te(this.condition),
+				consequent: te(this.consequent),
+				alternate: te(this.alternate)
+			}
+		}],
+		[['.seq', ',..xs'], function(form){
+			return {
+				type: 'SequenceExpression',
+				expressions: this.xs.map(te)
+			}
+		}],
 		[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
 		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache, globals.strict) }}],
 		[['.id', ',id', ',scope'], function(form){
@@ -241,11 +255,22 @@ exports.pass = function(form, globals, lcmap) {
 			return { type: 'Identifier', name: name }
 		}],
 		[['.', ',left', ',right'], function(form){
-			return {
-				type: 'MemberExpression',
-				object: te(this.left),
-				property: te(this.right),
-				computed: true
+			var l = te(this.left);
+			var r = te(this.right);
+			if(r.type === 'Literal' && typeof r.value === 'string' && /^[a-zA-Z]\w*$/.test(r.value)){
+				return {
+					type: 'MemberExpression',
+					object: l,
+					property: { type : 'Identifier', name: r.value },
+					computed: false
+				}
+			} else {
+				return {
+					type: 'MemberExpression',
+					object: l,
+					property: r,
+					computed: true
+				}
 			}
 		}],
 		[['.quote', ',val'], function(form){ 

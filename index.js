@@ -27,6 +27,7 @@ exports.DefaultExterns = function(){
 	externs.declare('Array')
 	externs.declare('Math')
 	externs.declare('Buffer')
+	externs.declare('Symbol')
 	externs.declare('alert')
 	externs.declare('console')
 	externs.declare('setInterval')

@@ -102,9 +102,9 @@ var trivial = syntax_rule(
 		return a;
 	}],
 	[['.begin', ',a'], function(form){ return trivial(form[1]) }],
-	[['.if', ',condition', ',consequent'],
-	 ['.if', ',condition', ',consequent', ',alternate'],
-	 ['.begin', ',..args'],
+	[//['.if', ',condition', ',consequent'],
+	 //['.if', ',condition', ',consequent', ',alternate'],
+	 //['.begin', ',..args'],
 	 ['.while', ',test', ',body'],
 	 ['.return', ',x'], 
 	 ['.throw', ',x'], function(form){ 
@@ -148,7 +148,11 @@ var trivial = syntax_rule(
 			return a;
 		}
 	}],
-	[['.set', ',left', ',right'],
+	[
+	 ['.if', ',condition', ',consequent'],
+	 ['.if', ',condition', ',consequent', ',alternate'],
+	 ['.begin', ',..args'],
+	 ['.set', ',left', ',right'],
 	 ['.new', ',callee', ',..args'],
 	 ['.list', ',..items'],
 	 ['.', ',left', ',right'],
@@ -190,6 +194,8 @@ exports.pass = function(form, globals, kExit, expressionary) {
 	// k accepts regularized form, and combines it with incoming subforms.
 	var rs = syntax_rule(
 		// NOTE: Treatment on Return and Throw nodes are IDENTICAL to those in re.
+		[['.trivial', ['.if', ',..xs']], function(form, env, k){ return rs(form[1], env, k) }],
+		[['.trivial', ['.begin', ',..xs']], function(form, env, k){ return rs(form[1], env, k) }],
 		[['.if', ',cond', ',consequent'], function(form, env, k){ return re(form.concat([['.unit']]), env, k)}],
 		[['.if', ',cond', ',consequent', ',alternate'], function(form, env, k){
 			var $consequent = this.consequent;
@@ -462,6 +468,7 @@ exports.pass = function(form, globals, kExit, expressionary) {
 							['.set', derived.tDerivFn, ['.lambda', [], ['.unit']]],
 							['.set', ['.', derived.tDerivFn, ['.quote', 'prototype']],  ['.', selfid, ['.quote', 'prototype']]],
 							['.set', derived.tRetp, ['.new', derived.tDerivFn]]]],
+						['.set', ['.', derived.tRetp, ['.', globals.use('Symbol'), ['.quote', 'iterator']]], ['.lambda', [], ['.return', derived.tRetp]]],
 						['.set', ['.', derived.tRetp, ['.quote', 'next']], derived.tNext],
 						['.set', ['.', derived.tRetp, ['.quote', 'throw']], ['.lambda', ['x'], ['.return', [derived.tCatch, 'x']]]],
 						['.return', derived.tRetp]
@@ -609,6 +616,32 @@ exports.pass = function(form, globals, kExit, expressionary) {
 					return k(keepBeginsAndEnds(form, ['.hash'].concat(a)))
 				})
 			}],
+		[['.trivial', ['.begin']], function(form, env, k){ return k(['.unit']) }],
+		[['.trivial', ['.begin', ',x']], function(form, env, k){ return re(this.x, env, k) }],
+		[['.trivial', ['.begin', ',..xs']], function(form, env, k){
+			var $xs = this.xs;
+			return ret$($xs, env, function(xs){
+				return k(keepBeginsAndEnds(form, ['.seq'].concat(xs)))
+			})
+		}],
+		[['.trivial', ['.if', ',condition', ',consequent']], function(form, env, k){
+			var $condition = this.condition, $consequent = this.consequent;
+			return re($condition, env, function(c){
+				return re($consequent, env, function(co){
+					return k(keepBeginsAndEnds(form, ['.conditional', c, co, ['.unit']]))
+				})
+			})
+		}],
+		[['.trivial', ['.if', ',condition', ',consequent', ',alternate']], function(form, env, k){
+			var $condition = this.condition, $consequent = this.consequent, $alternate = this.alternate;
+			return re($condition, env, function(c){
+				return re($consequent, env, function(co){
+					return re($alternate, env, function(a){
+						return k(keepBeginsAndEnds(form, ['.conditional', c, co, a]))
+					})
+				})
+			})
+		}],
 		[['.trivial', [_('operator', prim), ',..args']], function(form, env, k){
 			var $operator = this.operator, $args = this.args;
 			return ret$($args, env, function(args){
