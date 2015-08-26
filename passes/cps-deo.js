@@ -468,6 +468,7 @@ exports.pass = function(form, globals, kExit, expressionary) {
 							['.set', derived.tDerivFn, ['.lambda', [], ['.unit']]],
 							['.set', ['.', derived.tDerivFn, ['.quote', 'prototype']],  ['.', selfid, ['.quote', 'prototype']]],
 							['.set', derived.tRetp, ['.new', derived.tDerivFn]]]],
+						['.set', ['.', derived.tRetp, ['.', globals.use('Symbol'), ['.quote', 'iterator']]], ['.lambda', [], ['.return', derived.tRetp]]],
 						['.set', ['.', derived.tRetp, ['.quote', 'next']], derived.tNext],
 						['.set', ['.', derived.tRetp, ['.quote', 'throw']], ['.lambda', ['x'], ['.return', [derived.tCatch, 'x']]]],
 						['.return', derived.tRetp]
