@@ -817,7 +817,7 @@ exports.pass = function(form, globals, kExit, expressionary) {
 			var a = form.slice(1).map(mb);
 			var res = [];
 			for(var j = 0; j < a.length; j++){
-				if(a[j] instanceof Array && a[j][0] === '.begin'){
+				if(a[j] instanceof Array && (a[j][0] === '.begin' || a[j][0] === '.seq')){
 					res = res.concat(a[j].slice(1))
 				} else {
 					res.push(a[j])
@@ -825,6 +825,18 @@ exports.pass = function(form, globals, kExit, expressionary) {
 			};
 			res = res.filter(function(x){ return !triv(x) })
 			return keepBeginsAndEnds(form, ['.begin'].concat(res));
+		} else if(form instanceof Array && form[0] === '.seq'){
+			var a = form.slice(1).map(mb);
+			var res = [];
+			for(var j = 0; j < a.length; j++){
+				if(a[j] instanceof Array && a[j][0] === '.seq'){
+					res = res.concat(a[j].slice(1))
+				} else {
+					res.push(a[j])
+				}
+			};
+			res = res.filter(function(x){ return !triv(x) })
+			return keepBeginsAndEnds(form, ['.seq'].concat(res));
 		} else if(form instanceof Array && form[0] === '.trivial') {
 			return keepBeginsAndEnds(form, mb(form[1]))
 		} else if(form instanceof Array){
