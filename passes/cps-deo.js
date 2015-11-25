@@ -836,7 +836,9 @@ exports.pass = function(form, globals, kExit, expressionary) {
 				}
 			};
 			res = res.slice(0, -1).filter(function(x){ return !triv(x) }).concat([res[res.length - 1]])
-			return keepBeginsAndEnds(form, ['.seq'].concat(res));
+			if(res.length === 0) return ['.unit']
+			else if(res.length === 1) return res[0]
+			else return keepBeginsAndEnds(form, ['.seq'].concat(res));
 		} else if(form instanceof Array && form[0] === '.trivial') {
 			return keepBeginsAndEnds(form, mb(form[1]))
 		} else if(form instanceof Array){
