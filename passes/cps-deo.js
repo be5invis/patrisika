@@ -835,7 +835,7 @@ exports.pass = function(form, globals, kExit, expressionary) {
 					res.push(a[j])
 				}
 			};
-			res = res.filter(function(x){ return !triv(x) })
+			res = res.slice(0, -1).filter(function(x){ return !triv(x) }).concat([res[res.length - 1]])
 			return keepBeginsAndEnds(form, ['.seq'].concat(res));
 		} else if(form instanceof Array && form[0] === '.trivial') {
 			return keepBeginsAndEnds(form, mb(form[1]))
