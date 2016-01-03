@@ -196,7 +196,12 @@ exports.pass = function(form, globals, kExit, expressionary) {
 		// NOTE: Treatment on Return and Throw nodes are IDENTICAL to those in re.
 		[['.trivial', ['.if', ',..xs']], function(form, env, k){ return rs(form[1], env, k) }],
 		[['.trivial', ['.begin', ',..xs']], function(form, env, k){ return rs(form[1], env, k) }],
-		[['.if', ',cond', ',consequent'], function(form, env, k){ return re(form.concat([['.unit']]), env, k)}],
+		[['.if', ',cond', ',consequent'], function(form, env, k){
+			var $consequent = this.consequent;
+			return re(this.cond, env, function(c){
+				return k(['.if', c, rs($consequent, env, id)])
+			})
+		}],
 		[['.if', ',cond', ',consequent', ',alternate'], function(form, env, k){
 			var $consequent = this.consequent;
 			var $alternate = this.alternate;
