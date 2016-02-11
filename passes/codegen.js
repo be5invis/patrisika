@@ -183,7 +183,7 @@ exports.pass = function(form, globals, lcmap) {
 				locals = locals.concat(s.temps.map(function(id){
 					return {
 						type: "VariableDeclarator",
-						id: {type: "Identifier", name: resolveTemp(id, s, resolutionCache, globals.strict)},
+						id: {type: "Identifier", name: resolveTemp(id, s, resolutionCache, isStrict)},
 						init: null
 					}
 				}));
@@ -199,7 +199,7 @@ exports.pass = function(form, globals, lcmap) {
 						}), hss.temps.map(function(id){
 							return {
 								type: "VariableDeclarator",
-								id: {type: "Identifier", name: resolveTemp(id, hss, resolutionCache, globals.strict)},
+								id: {type: "Identifier", name: resolveTemp(id, hss, resolutionCache, isStrict)},
 								init: null
 							}
 						}))
@@ -242,11 +242,11 @@ exports.pass = function(form, globals, lcmap) {
 			}
 		}],
 		[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
-		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache, globals.strict) }}],
+		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache, isStrict) }}],
 		[['.id', ',id', ',scope'], function(form){
-			var match = resolveIdentifier(this.id, this.scope, resolutionCache, globals.strict);
+			var match = resolveIdentifier(this.id, this.scope, resolutionCache, isStrict);
 			var name = match.belongs.castName(this.id);
-			if(globals.strict && resolutionCache.undeclareds && resolutionCache.undeclareds.has(this.id)){
+			if(isStrict && resolutionCache.undeclareds && resolutionCache.undeclareds.has(this.id)){
 				var entries = resolutionCache.undeclareds.get(this.id);
 				for(var j = 0; j < entries.length; j++) if(entries[j].belongs === this.scope && !entries[j].firstUse){
 					entries[j].firstUse = lastNode
@@ -355,12 +355,14 @@ exports.pass = function(form, globals, lcmap) {
 			throw new FormInvalidError(form, "Unknown Node Type")
 		}]
 	);
-
+	
+	var isStrict = false;
+	if(globals.options && globals.options.strict) isStrict = true;
 	var s = te(['.lambda.scoped', [], form, globals]);
 	while(holdingTasks.length) {
 		holdingTasks.shift()();
 	};
-	if(globals.strict && resolutionCache.undeclareds){
+	if(isStrict && resolutionCache.undeclareds){
 		var ex = new Error();
 		ex.suberrors = [];
 		resolutionCache.undeclareds.forEachOwn(function(key, entries){
