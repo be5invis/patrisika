@@ -195,7 +195,7 @@ exports.pass = function(form, globals, lcmap) {
 							 	type: "VariableDeclarator",
 							 	id: {type: "Identifier", name: hss.castName(id)},
 							 	init: null
-							}						
+							}
 						}), hss.temps.map(function(id){
 							return {
 								type: "VariableDeclarator",
@@ -205,7 +205,34 @@ exports.pass = function(form, globals, lcmap) {
 						}))
 					}
 				};
-				if(locals.length){
+
+				// dehoist
+				var localHash = {};
+				for(var j = 0; j < locals.length; j++){
+					localHash[locals[j].id.name] = true;
+				};
+				for(var j = 0; j < params.length; j++){
+					localHash[params[j].name] = false;
+				};
+				for(var j = 0; j < body.body.length; j++) if(body.body[j].type === 'ExpressionStatement'
+					&& body.body[j].expression.type === 'AssignmentExpression'
+					&& body.body[j].expression.left.type === 'Identifier'
+					&& localHash[body.body[j].expression.left.name] === true) {
+					localHash[body.body[j].expression.left.name] = false;
+					body.body[j] = {
+						type: "VariableDeclaration",
+						kind: 'var',
+						declarations: [{
+							type: "VariableDeclarator",
+							id: body.body[j].expression.left,
+							init: body.body[j].expression.right
+						}]
+					};
+				};
+				locals = locals.filter(function(d){
+					return (localHash[d.id.name] === true)
+				});
+				if(locals.length) {
 					body.body.unshift({
 						type: "VariableDeclaration",
 						kind: "var",
