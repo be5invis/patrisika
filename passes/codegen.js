@@ -183,7 +183,7 @@ exports.pass = function(form, globals, lcmap) {
 				locals = locals.concat(s.temps.map(function(id){
 					return {
 						type: "VariableDeclarator",
-						id: {type: "Identifier", name: resolveTemp(id, s, resolutionCache, globals.strict)},
+						id: {type: "Identifier", name: resolveTemp(id, s, resolutionCache, isStrict)},
 						init: null
 					}
 				}));
@@ -195,17 +195,44 @@ exports.pass = function(form, globals, lcmap) {
 							 	type: "VariableDeclarator",
 							 	id: {type: "Identifier", name: hss.castName(id)},
 							 	init: null
-							}						
+							}
 						}), hss.temps.map(function(id){
 							return {
 								type: "VariableDeclarator",
-								id: {type: "Identifier", name: resolveTemp(id, hss, resolutionCache, globals.strict)},
+								id: {type: "Identifier", name: resolveTemp(id, hss, resolutionCache, isStrict)},
 								init: null
 							}
 						}))
 					}
 				};
-				if(locals.length){
+
+				// dehoist
+				var localHash = {};
+				for(var j = 0; j < locals.length; j++){
+					localHash[locals[j].id.name] = true;
+				};
+				for(var j = 0; j < params.length; j++){
+					localHash[params[j].name] = false;
+				};
+				for(var j = 0; j < body.body.length; j++) if(body.body[j].type === 'ExpressionStatement'
+					&& body.body[j].expression.type === 'AssignmentExpression'
+					&& body.body[j].expression.left.type === 'Identifier'
+					&& localHash[body.body[j].expression.left.name] === true) {
+					localHash[body.body[j].expression.left.name] = false;
+					body.body[j] = {
+						type: "VariableDeclaration",
+						kind: 'var',
+						declarations: [{
+							type: "VariableDeclarator",
+							id: body.body[j].expression.left,
+							init: body.body[j].expression.right
+						}]
+					};
+				};
+				locals = locals.filter(function(d){
+					return (localHash[d.id.name] === true)
+				});
+				if(locals.length) {
 					body.body.unshift({
 						type: "VariableDeclaration",
 						kind: "var",
@@ -242,11 +269,11 @@ exports.pass = function(form, globals, lcmap) {
 			}
 		}],
 		[['.t', ',id'], function(form){ return { type: 'Identifier', name: this.id }}],
-		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache, globals.strict) }}],
+		[['.t', ',id', ',scope'], function(form){ return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache, isStrict) }}],
 		[['.id', ',id', ',scope'], function(form){
-			var match = resolveIdentifier(this.id, this.scope, resolutionCache, globals.strict);
+			var match = resolveIdentifier(this.id, this.scope, resolutionCache, isStrict);
 			var name = match.belongs.castName(this.id);
-			if(globals.strict && resolutionCache.undeclareds && resolutionCache.undeclareds.has(this.id)){
+			if(isStrict && resolutionCache.undeclareds && resolutionCache.undeclareds.has(this.id)){
 				var entries = resolutionCache.undeclareds.get(this.id);
 				for(var j = 0; j < entries.length; j++) if(entries[j].belongs === this.scope && !entries[j].firstUse){
 					entries[j].firstUse = lastNode
@@ -355,12 +382,14 @@ exports.pass = function(form, globals, lcmap) {
 			throw new FormInvalidError(form, "Unknown Node Type")
 		}]
 	);
-
+	
+	var isStrict = false;
+	if(globals.options && globals.options.strict) isStrict = true;
 	var s = te(['.lambda.scoped', [], form, globals]);
 	while(holdingTasks.length) {
 		holdingTasks.shift()();
 	};
-	if(globals.strict && resolutionCache.undeclareds){
+	if(isStrict && resolutionCache.undeclareds){
 		var ex = new Error();
 		ex.suberrors = [];
 		resolutionCache.undeclareds.forEachOwn(function(key, entries){
