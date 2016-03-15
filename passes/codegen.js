@@ -36,6 +36,7 @@ exports.pass = function(form, globals, lcmap) {
 
 	var holdingTasks = [];
 	var resolutionCache = [];
+	var constantOverrides = [];
 	function tb(form) {
 		var s = ts(form);
 		if (s.type !== 'BlockStatement') {
@@ -336,6 +337,23 @@ exports.pass = function(form, globals, lcmap) {
 		binop('.is', 'instanceof'),
 		logop('&&'),
 		logop('||'),
+		[['.set', ['.id', ',id', ',scope'], ',right'], function(form) {
+			var match = resolveIdentifier(this.id, this.scope, resolutionCache, isStrict);
+			var record = match.belongs.declarations.get(this.id);
+			if(record && record.isParameter) {
+				if(!record.assignmentsUsed) record.assignmentsUsed = 0;
+				record.assignmentsUsed += 1;
+				if(record.isParameter - 0 <= record.assignmentsUsed){
+					constantOverrides.push([this.id, lastNode]);
+				}
+			}
+			return {
+				type: 'AssignmentExpression',
+				left: te(['.id', this.id, this.scope]),
+				right: te(this.right),
+				operator: '='
+			}
+		}],
 		[['.set', ',left', ',right'], function(form) {
 			return {
 				type: 'AssignmentExpression',
@@ -389,10 +407,10 @@ exports.pass = function(form, globals, lcmap) {
 	while (holdingTasks.length) {
 		holdingTasks.shift()();
 	};
-	if (isStrict && resolutionCache.undeclareds) {
+	if (isStrict && (resolutionCache.undeclareds || constantOverrides.length > 0)) {
 		var ex = new Error();
 		ex.suberrors = [];
-		resolutionCache.undeclareds.forEachOwn(function(key, entries) {
+		if(resolutionCache.undeclareds) resolutionCache.undeclareds.forEachOwn(function(key, entries) {
 			for (var j = 0; j < entries.length; j++) {
 				var subex = new Error();
 				subex.message = "Undeclared variable " + key;
@@ -403,6 +421,16 @@ exports.pass = function(form, globals, lcmap) {
 				}
 				ex.suberrors.push(subex);
 			}
+		});
+		constantOverrides.forEach(function(c){
+			var subex = new Error();
+			subex.message = "Attempt to rewrite constant " + c[0];
+			if(c[1]){
+				subex.within = c[1].within;
+				subex.begins = c[1].begins;
+				subex.ends = c[1].ends;
+			}
+			ex.suberrors.push(subex)
 		});
 		throw ex;
 	}
