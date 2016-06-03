@@ -13,13 +13,13 @@ var resolveTemp = require('patrisika-scopes').resolveTemp
 
 var FormInvalidError = require('../commons/formerror.js').FormInvalidError
 
-exports.pass = function(form, globals, lcmap) {
+exports.pass = function (form, globals, lcmap) {
 	var lastNode;
 
 	if (!lcmap) var syntax_rule_withLoc = syntax_rule;
-	else var syntax_rule_withLoc = function() {
+	else var syntax_rule_withLoc = function () {
 		var fn = syntax_rule.apply(this, arguments);
-		return function(node) {
+		return function (node) {
 			var t = lastNode;
 			if (node && node.begins >= 0 && node.ends >= 0) lastNode = node;
 			var res = fn.apply(this, arguments);
@@ -49,13 +49,13 @@ exports.pass = function(form, globals, lcmap) {
 	}
 	var ts = syntax_rule_withLoc(
 
-		[['.begin', ',..statements'], function(form) {
+		[['.begin', ',..statements'], function (form) {
 			return {
 				type: 'BlockStatement',
 				body: this.statements.map(ts)
 			}
 		}],
-		[['.if', ',condition', ',consequent', ',alternate'], function(form) {
+		[['.if', ',condition', ',consequent', ',alternate'], function (form) {
 			return {
 				type: 'IfStatement',
 				test: te(this.condition),
@@ -63,7 +63,7 @@ exports.pass = function(form, globals, lcmap) {
 				alternate: ts(this.alternate)
 			}
 		}],
-		[['.if', ',condition', ',consequent'], function(form) {
+		[['.if', ',condition', ',consequent'], function (form) {
 			return {
 				type: 'IfStatement',
 				test: te(this.condition),
@@ -71,7 +71,7 @@ exports.pass = function(form, globals, lcmap) {
 				alternate: null
 			}
 		}],
-		[['.while', ',test', ',body'], function(form) {
+		[['.while', ',test', ',body'], function (form) {
 			var test = te(this.test);
 			var body = ts(this.body);
 			var update = null;
@@ -86,7 +86,7 @@ exports.pass = function(form, globals, lcmap) {
 				body: body
 			}
 		}],
-		[['.try', ',block', [',param'], ',handler'], function(form) {
+		[['.try', ',block', [',param'], ',handler'], function (form) {
 			return {
 				type: 'TryStatement',
 				block: tb(this.block),
@@ -97,19 +97,19 @@ exports.pass = function(form, globals, lcmap) {
 				}]
 			}
 		}],
-		[['.return', ',argument'], function(form) {
+		[['.return', ',argument'], function (form) {
 			return {
 				type: 'ReturnStatement',
 				argument: te(this.argument)
 			}
 		}],
-		[['.throw', ',argument'], function(form) {
+		[['.throw', ',argument'], function (form) {
 			return {
 				type: 'ThrowStatement',
 				argument: te(this.argument)
 			}
 		}],
-		[any, function(form) {
+		[any, function (form) {
 			return {
 				type: 'ExpressionStatement',
 				expression: te(form)
@@ -118,10 +118,10 @@ exports.pass = function(form, globals, lcmap) {
 	);
 
 	function Binopoid(spiderMonkeyNodeType) {
-		return function(operator, jsOperator) {
-			return [[operator, ',..items'], function() {
+		return function (operator, jsOperator) {
+			return [[operator, ',..items'], function () {
 				if (this.items.length > 1) {
-					return this.items.slice(1).reduce(function(left, right) {
+					return this.items.slice(1).reduce(function (left, right) {
 						return {
 							type: spiderMonkeyNodeType,
 							left: left,
@@ -138,8 +138,8 @@ exports.pass = function(form, globals, lcmap) {
 	var binop = Binopoid('BinaryExpression');
 	var logop = Binopoid('LogicalExpression');
 
-	var uniop = function(operator, jsOperator) {
-		return [[operator, ',argument'], function() {
+	var uniop = function (operator, jsOperator) {
+		return [[operator, ',argument'], function () {
 			return {
 				type: "UnaryExpression",
 				operator: jsOperator || operator,
@@ -150,9 +150,9 @@ exports.pass = function(form, globals, lcmap) {
 	}
 
 	var te = syntax_rule_withLoc(
-		[['.lambda', ',args', ',body'], function(form) {
+		[['.lambda', ',args', ',body'], function (form) {
 			var blank = {}, t = this;
-			holdingTasks.push(function() {
+			holdingTasks.push(function () {
 				blank.type = 'FunctionExpression';
 				blank.params = t.args.map(te);
 				blank.body = tb(t.body);
@@ -162,15 +162,15 @@ exports.pass = function(form, globals, lcmap) {
 			});
 			return blank;
 		}],
-		[['.lambda.scoped', ',args', ',body', ',scope'], function(form) {
+		[['.lambda.scoped', ',args', ',body', ',scope'], function (form) {
 			var blank = {}, t = this;
-			holdingTasks.push(function() {
+			holdingTasks.push(function () {
 				var params = t.args.map(te)
 				var body = tb(t.body);
 				var s = t.scope;
 				var cacheMatch = resolutionCache[s._N];
 				if (cacheMatch) {
-					var locals = cacheMatch.locals.map(function(id) {
+					var locals = cacheMatch.locals.map(function (id) {
 						return {
 							type: "VariableDeclarator",
 							id: { type: "Identifier", name: s.castName(id) },
@@ -181,7 +181,7 @@ exports.pass = function(form, globals, lcmap) {
 					var locals = [];
 				}
 
-				locals = locals.concat(s.temps.map(function(id) {
+				locals = locals.concat(s.temps.map(function (id) {
 					return {
 						type: "VariableDeclarator",
 						id: { type: "Identifier", name: resolveTemp(id, s, resolutionCache, isStrict) },
@@ -191,13 +191,13 @@ exports.pass = function(form, globals, lcmap) {
 				if (cacheMatch) for (var j = 0; j < cacheMatch.hangingSubscopes.length; j++) {
 					var hss = cacheMatch.hangingSubscopes[j];
 					if (resolutionCache[hss._N]) {
-						locals = locals.concat(resolutionCache[hss._N].locals.map(function(id) {
+						locals = locals.concat(resolutionCache[hss._N].locals.map(function (id) {
 							return {
 								type: "VariableDeclarator",
 								id: { type: "Identifier", name: hss.castName(id) },
 								init: null
 							}
-						}), hss.temps.map(function(id) {
+						}), hss.temps.map(function (id) {
 							return {
 								type: "VariableDeclarator",
 								id: { type: "Identifier", name: resolveTemp(id, hss, resolutionCache, isStrict) },
@@ -230,7 +230,7 @@ exports.pass = function(form, globals, lcmap) {
 						}]
 					};
 				};
-				locals = locals.filter(function(d) {
+				locals = locals.filter(function (d) {
 					return (localHash[d.id.name] === true)
 				});
 				if (locals.length) {
@@ -250,12 +250,12 @@ exports.pass = function(form, globals, lcmap) {
 			return blank;
 
 		}],
-		[['.lambda.scoped', ',args', ',body', ',scope', ',id'], function(form) {
+		[['.lambda.scoped', ',args', ',body', ',scope', ',id'], function (form) {
 			var e = te(form.slice(0, -1));
 			e.id = te(this.id);
 			return e;
 		}],
-		[['.conditional', ',condition', ',consequent', ',alternate'], function(form) {
+		[['.conditional', ',condition', ',consequent', ',alternate'], function (form) {
 			return {
 				type: 'ConditionalExpression',
 				test: te(this.condition),
@@ -263,15 +263,15 @@ exports.pass = function(form, globals, lcmap) {
 				alternate: te(this.alternate)
 			}
 		}],
-		[['.seq', ',..xs'], function(form) {
+		[['.seq', ',..xs'], function (form) {
 			return {
 				type: 'SequenceExpression',
 				expressions: this.xs.map(te)
 			}
 		}],
-		[['.t', ',id'], function(form) { return { type: 'Identifier', name: this.id } }],
-		[['.t', ',id', ',scope'], function(form) { return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache, isStrict) } }],
-		[['.id', ',id', ',scope'], function(form) {
+		[['.t', ',id'], function (form) { return { type: 'Identifier', name: this.id } }],
+		[['.t', ',id', ',scope'], function (form) { return { type: 'Identifier', name: resolveTemp(this.id, this.scope, resolutionCache, isStrict) } }],
+		[['.id', ',id', ',scope'], function (form) {
 			var match = resolveIdentifier(this.id, this.scope, resolutionCache, isStrict);
 			var name = match.belongs.castName(this.id);
 			if (isStrict && resolutionCache.undeclareds && resolutionCache.undeclareds.has(this.id)) {
@@ -282,7 +282,7 @@ exports.pass = function(form, globals, lcmap) {
 			}
 			return { type: 'Identifier', name: name }
 		}],
-		[['.', ',left', ',right'], function(form) {
+		[['.', ',left', ',right'], function (form) {
 			var l = te(this.left);
 			var r = te(this.right);
 			if (r.type === 'Literal' && typeof r.value === 'string' && /^[a-zA-Z]\w*$/.test(r.value)) {
@@ -301,18 +301,18 @@ exports.pass = function(form, globals, lcmap) {
 				}
 			}
 		}],
-		[['.quote', ',val'], function(form) {
+		[['.quote', ',val'], function (form) {
 			if (this.val === undefined) return { type: 'UnaryExpression', operator: 'void', prefix: true, argument: { type: 'Literal', value: 0 } }
 			else if (typeof this.val === "number" && this.val < 0) return { type: "UnaryExpression", operator: '-', prefix: true, argument: { type: "Literal", value: -this.val } }
 			else return { type: 'Literal', value: this.val }
 		}],
-		[['.unit'], function(form) {
+		[['.unit'], function (form) {
 			return { type: 'UnaryExpression', operator: 'void', prefix: true, argument: { type: 'Literal', value: 0 } }
 		}],
-		[['.thisp'], function(form) {
+		[['.thisp'], function (form) {
 			return { type: 'ThisExpression' }
 		}],
-		[['.argsp'], function(form) {
+		[['.argsp'], function (form) {
 			return { type: 'Identifier', name: 'arguments' }
 		}],
 		uniop('.typeof', 'typeof'),
@@ -337,13 +337,13 @@ exports.pass = function(form, globals, lcmap) {
 		binop('.is', 'instanceof'),
 		logop('&&'),
 		logop('||'),
-		[['.set', ['.id', ',id', ',scope'], ',right'], function(form) {
+		[['.set', ['.id', ',id', ',scope'], ',right'], function (form) {
 			var match = resolveIdentifier(this.id, this.scope, resolutionCache, isStrict);
 			var record = match.belongs.declarations.get(this.id);
-			if(record && record.isParameter) {
-				if(!record.assignmentsUsed) record.assignmentsUsed = 0;
+			if (record && record.isParameter) {
+				if (!record.assignmentsUsed) record.assignmentsUsed = 0;
 				record.assignmentsUsed += 1;
-				if(record.isParameter - 0 <= record.assignmentsUsed){
+				if (record.isParameter - 0 <= record.assignmentsUsed) {
 					constantOverrides.push([this.id, lastNode]);
 				}
 			}
@@ -354,7 +354,7 @@ exports.pass = function(form, globals, lcmap) {
 				operator: '='
 			}
 		}],
-		[['.set', ',left', ',right'], function(form) {
+		[['.set', ',left', ',right'], function (form) {
 			return {
 				type: 'AssignmentExpression',
 				left: te(this.left),
@@ -362,10 +362,10 @@ exports.pass = function(form, globals, lcmap) {
 				operator: '='
 			}
 		}],
-		[['.hash', ',..pairs'], function(form) {
+		[['.hash', ',..pairs'], function (form) {
 			return {
 				type: 'ObjectExpression',
-				properties: this.pairs.map(function(pair) {
+				properties: this.pairs.map(function (pair) {
 					return {
 						key: { type: 'Literal', value: pair[0] },
 						value: te(pair[1]),
@@ -374,29 +374,29 @@ exports.pass = function(form, globals, lcmap) {
 				})
 			}
 		}],
-		[['.list', ',..args'], function(form) {
+		[['.list', ',..args'], function (form) {
 			return {
 				type: "ArrayExpression",
 				elements: this.args.map(te)
 			}
 		}],
-		[['.new', ',callee', ',..args'], function(form) {
+		[['.new', ',callee', ',..args'], function (form) {
 			return {
 				type: "NewExpression",
 				callee: te(this.callee),
 				arguments: this.args.map(te)
 			}
 		}],
-		[['.exotic', ',ast'], function(form) { return form[1] }],
-		[[',callee', ',..args'], function(form) {
+		[['.exotic', ',ast'], function (form) { return form[1] }],
+		[[',callee', ',..args'], function (form) {
 			return {
 				type: 'CallExpression',
 				callee: te(this.callee),
 				arguments: this.args.map(te)
 			}
 		}],
-		[atom, function(form) { return { type: 'Identifier', name: form } }],
-		[any, function(form) {
+		[atom, function (form) { return { type: 'Identifier', name: form } }],
+		[any, function (form) {
 			throw new FormInvalidError(form, "Unknown Node Type")
 		}]
 	);
@@ -410,7 +410,7 @@ exports.pass = function(form, globals, lcmap) {
 	if (isStrict && (resolutionCache.undeclareds || constantOverrides.length > 0)) {
 		var ex = new Error();
 		ex.suberrors = [];
-		if(resolutionCache.undeclareds) resolutionCache.undeclareds.forEachOwn(function(key, entries) {
+		if (resolutionCache.undeclareds) resolutionCache.undeclareds.forEachOwn(function (key, entries) {
 			for (var j = 0; j < entries.length; j++) {
 				var subex = new Error();
 				subex.message = "Undeclared variable " + key;
@@ -422,10 +422,10 @@ exports.pass = function(form, globals, lcmap) {
 				ex.suberrors.push(subex);
 			}
 		});
-		constantOverrides.forEach(function(c){
+		constantOverrides.forEach(function (c) {
 			var subex = new Error();
 			subex.message = "Attempt to rewrite constant " + c[0];
-			if(c[1]){
+			if (c[1]) {
 				subex.within = c[1].within;
 				subex.begins = c[1].begins;
 				subex.ends = c[1].ends;
