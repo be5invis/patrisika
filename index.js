@@ -6,11 +6,11 @@ var cdg = require('./passes/codegen').pass;
 exports.FormInvalidError = require('./commons/formerror.js').FormInvalidError;
 exports.regularize = deo;
 exports.pat2esc = cdg;
-exports.generate = function(ast, globals, exitK) {
+exports.generate = function (ast, globals, exitK) {
 	var r = deo(ast, globals, exitK);
 	return cdg(r, globals)
 }
-exports.DefaultExterns = function() {
+exports.DefaultExterns = function () {
 	var externs = new Scope();
 	externs.castName = escapeId;
 
