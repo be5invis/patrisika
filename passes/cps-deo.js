@@ -125,6 +125,7 @@ var trivial = syntax_rule(
 		//['.begin', ',..args'],
 		['.while', ',test', ',body'],
 		['.return', ',x'],
+		['.break', ',x'],
 		['.throw', ',x'], function (form) {
 			var a = [form[0]];
 			for (var j = 1; j < form.length; j++) {
@@ -367,6 +368,9 @@ exports.pass = function (form, globals, kExit, expressionary) {
 		[['.&', ['.return', ',x']], ['.return', ',x'], function (form, env, k) {
 			return re(this.x, env, env.exitK)
 		}],
+		[['.&', ['.break', ',x']], ['.break', ',x'], function (form, env, k) {
+			return re(this.x, env, env.normalExitK || env.exitK)
+		}],
 		[['.&', ['.throw', ',x']], ['.throw', ',x'], function (form, env, k) {
 			if (env.isGenerator) {
 				return re(this.x, env, function (x) { return ['.return', [env.tCatch, x]] })
@@ -485,7 +489,7 @@ exports.pass = function (form, globals, kExit, expressionary) {
 				derived.argsBindStatement = ['.unit'];
 				derived.tThis = derived.newt();
 				derived.tArgs = derived.newt();
-				var body = re(b, derived, derived.exitK);
+				var body = commitTransform(re, b, derived, derived.exitK);
 				body = ['.begin', derived.thisBindStatement, derived.argsBindStatement, body];
 				if (derived.isGenerator) {
 					return k(keepBeginsAndEnds(form, ['.lambda.scoped', args, ['.begin',
@@ -533,14 +537,14 @@ exports.pass = function (form, globals, kExit, expressionary) {
 				var tExit = derived.newt();
 				var tx = derived.newt();
 				derived.exitK = function (x) { return ['.return', [tExit, x]] };
-
+				derived.normalExitK = function (x) { return ['.return', [tNorm, x]] };
 				var tNorm = derived.newt();
 				var tnx = derived.newt();
 
 				return ['.return', keepBeginsAndEnds(form, [['.lambda.scoped', args, ['.begin',
 					['.set', tExit, ['.lambda', [tx], env.exitK(tx)]],
 					['.set', tNorm, ['.lambda', [tnx], k(tnx)]],
-					['.set', derived.tStep, ['.lambda', [], re($body, derived, function (x) { return ['.return', [tNorm, x]] })]],
+					['.set', derived.tStep, ['.lambda', [], commitTransform(re, $body, derived, derived.normalExitK)]],
 					['.return', [derived.tNext]]
 				], derived]].concat(params))]
 			})
@@ -578,27 +582,29 @@ exports.pass = function (form, globals, kExit, expressionary) {
 						['.return', t]
 					]
 				};
+				derived.normalExitK = function (x) {
+					var retex = ['.return', ['.set', t, x]];
+					normalExitReturns.push(retex);
+					return retex;
+				};
 				var t = env.newt();
 				var tag = env.newt('tag');
 
 				var normalExitReturns = [];
 
-				var b = re($body, derived, function (x) {
-					var retex = ['.return', ['.set', t, x]];
-					normalExitReturns.push(retex);
-					return retex;
-				});
+				var b = commitTransform(re, $body, derived, derived.normalExitK);
+				var main = keepBeginsAndEnds(form, [['.lambda.scoped', args, b, derived]].concat(params));
 				if (returnUsed) {
 					return ['.begin',
 						['.set', tag, ['.quote', false]],
-						keepBeginsAndEnds(form, [['.lambda.scoped', args, b, derived]].concat(params)),
+						main,
 						['.if', tag, env.exitK(t), k(t)]
 					]
 				} else {
 					for (var j = 0; j < normalExitReturns.length; j++) {
 						normalExitReturns[j][1] = normalExitReturns[j][1][2]
 					}
-					return k(keepBeginsAndEnds(form, [['.lambda.scoped', args, b, derived]].concat(params)))
+					return (k(main))
 				}
 			})
 		}],
@@ -879,6 +885,8 @@ exports.pass = function (form, globals, kExit, expressionary) {
 			};
 			res = res.filter(function (x) { return !triv(x) })
 			return keepBeginsAndEnds(form, ['.begin'].concat(res));
+		} else if (form instanceof Array && form[0] === '.decide') {
+			if (form[1]()) { return mb(form[2]()) } else { return mb(form[3]()) }
 		} else if (form instanceof Array && form[0] === '.seq') {
 			var a = form.slice(1).map(mb);
 			var res = [];
@@ -912,17 +920,22 @@ exports.pass = function (form, globals, kExit, expressionary) {
 	var delaiedTransformations = [];
 	var tf = trivial(form);
 
-	var transformed = (expressionary ? ra : rs)(tf, globals, globals.exitK);
-
-	var nRolls = 0;
-
-	while (delaiedTransformations.length) {
-		var todos = delaiedTransformations;
+	function commitTransform(transformer, form, env, k) {
+		var _dt = delaiedTransformations;
 		delaiedTransformations = [];
-		for (var j = 0; j < todos.length; j++) {
-			(todos[j].after || id)(todos[j].method(todos[j].form, todos[j].env, todos[j].k))
+		var transformed = transformer(form, env, k);
+		var nRolls = 0;
+		while (delaiedTransformations.length) {
+			var todos = delaiedTransformations;
+			delaiedTransformations = [];
+			for (var j = 0; j < todos.length; j++) {
+				(todos[j].after || id)(todos[j].method(todos[j].form, todos[j].env, todos[j].k))
+			};
+			nRolls += 1;
 		};
-		nRolls += 1;
+		delaiedTransformations = _dt;
+		return transformed;
 	};
-	return mb(transformed);
+
+	return mb(commitTransform(expressionary ? ra : rs, tf, globals, globals.exitK));
 }
