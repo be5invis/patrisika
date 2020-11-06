@@ -467,7 +467,6 @@ exports.pass = function (form, globals, kExit, expressionary) {
 				while (b instanceof Array && b[0] === '.trivial' && b[1] instanceof Array && (b[1][0] === '.begin' || b[1][0] === '.trivial')) {
 					b = b[1];
 				};
-				var selfid = env.newt();
 				if (isDelaied(b)) {
 					derived.isGenerator = true;
 					derived.tStep = derived.newt();
@@ -492,6 +491,7 @@ exports.pass = function (form, globals, kExit, expressionary) {
 				var body = commitTransform(re, b, derived, derived.exitK);
 				body = ['.begin', derived.thisBindStatement, derived.argsBindStatement, body];
 				if (derived.isGenerator) {
+					var selfid = env.newt();
 					return k(keepBeginsAndEnds(form, ['.lambda.scoped', args, ['.begin',
 						['.set', derived.tStep, ['.lambda', [], body]],
 						['.set', derived.tNext, ['.lambda', ['x'], ['.try', ['.return', [derived.tStep, 'x']], ['ex'], ['.return', [derived.tCatch, 'ex']]]]],
@@ -506,7 +506,7 @@ exports.pass = function (form, globals, kExit, expressionary) {
 						['.return', derived.tRetp]
 					], derived, selfid]))
 				} else {
-					return k(keepBeginsAndEnds(form, ['.lambda.scoped', this.args, body, derived, selfid]))
+					return k(keepBeginsAndEnds(form, ['.lambda.scoped', this.args, body, derived]))
 				}
 			}],
 		[['.trivial', ['.lambda', [',..args'], ',body']],
