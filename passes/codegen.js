@@ -181,13 +181,17 @@ exports.pass = function (form, globals, lcmap) {
 					var locals = [];
 				}
 
-				locals = locals.concat(s.temps.map(function (id) {
-					return {
-						type: "VariableDeclarator",
-						id: { type: "Identifier", name: resolveTemp(id, s, resolutionCache, isStrict) },
-						init: null
-					}
-				}));
+				locals = locals.concat(s.temps
+					.filter(function(id){
+						return !s.isTempForImportExport.has(id);
+					})
+					.map(function (id) {
+						return {
+							type: "VariableDeclarator",
+							id: { type: "Identifier", name: resolveTemp(id, s, resolutionCache, isStrict) },
+							init: null
+						}
+					}));
 				if (cacheMatch) for (var j = 0; j < cacheMatch.hangingSubscopes.length; j++) {
 					var hss = cacheMatch.hangingSubscopes[j];
 					if (resolutionCache[hss._N]) {
@@ -434,5 +438,57 @@ exports.pass = function (form, globals, lcmap) {
 		});
 		throw ex;
 	}
-	return s.body;
+
+	// Wrap around imports and exports
+	var importStatements = []
+	var exportStatements = []
+	globals.imports.forEachOwn(function(source, t){
+		var idTemp = resolveTemp(t[1], t[2], resolutionCache, isStrict);
+		importStatements.push({
+			type: "VariableDeclaration",
+			kind: 'var',
+			declarations: [
+				{
+					type: 'VariableDeclarator',
+					id: { type: "Identifier", name: idTemp },
+					init: {
+						type: "CallExpression",
+						callee: { type: "Identifier", name: "require" },
+						arguments: [{ type: "Literal", value: source }]
+					}
+				}
+			]
+		});
+	})
+	globals.exports.forEachOwn(function(sink, t){
+		var idTemp = resolveTemp(t[1], t[2], resolutionCache, isStrict);
+			importStatements.push({
+			type: "VariableDeclaration",
+			kind: 'var',
+			declarations: [
+				{
+					type: 'VariableDeclarator',
+					id: { type: "Identifier", name: idTemp },
+				}
+			]
+		});
+		exportStatements.push({
+			type: "ExpressionStatement",
+			expression: {
+				type: 'AssignmentExpression',
+				operator: '=',
+				left: {
+					type: "MemberExpression",
+					object: { type: "Identifier", name: "exports" },
+					property: { type: "Literal", value: sink },
+					computed: true
+				},
+				right: { type: "Identifier", name: idTemp }
+			}
+		});
+	})
+	return {
+		type:'BlockStatement',
+		body: [...importStatements, ...s.body.body, ...exportStatements]
+	}
 };

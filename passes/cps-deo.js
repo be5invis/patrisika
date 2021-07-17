@@ -90,6 +90,8 @@ var trivial = syntax_rule(
 		['.id', _('id', atom)],
 		['.id', _('id', atom), ',scope'],
 		['.local', _('id', atom)],
+		['.import', _('id', atom)],
+		['.export', _('id', atom)],
 		['.unit'],
 		['.thisp'],
 		['.argsp'], function (form) { return ['.trivial', form] }],
@@ -624,6 +626,16 @@ exports.pass = function (form, globals, kExit, expressionary) {
 			function (form, env, k) {
 				env.declare(this.x);
 				return k(keepBeginsAndEnds(form, env.use(this.x)))
+			}],
+		[['.trivial', ['.import', ['.trivial', _('x', atom)]]], ['.import', ['.trivial', _('x', atom)]],
+			['.trivial', ['.import', _('x', atom)]], ['.import', _('x', atom)],
+			function (form, env, k) {
+				return k(keepBeginsAndEnds(form, env.addImport(this.x)));
+			}],
+		[['.trivial', ['.export', ['.trivial', _('x', atom)]]], ['.export', ['.trivial', _('x', atom)]],
+			['.trivial', ['.export', _('x', atom)]], ['.export', _('x', atom)],
+			function (form, env, k) {
+				return k(keepBeginsAndEnds(form, env.addExport(this.x)));
 			}],
 		[['.trivial', ['.thisp']], ['.thisp'],
 			function (form, env, k) {
