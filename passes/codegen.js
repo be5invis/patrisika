@@ -74,15 +74,9 @@ exports.pass = function (form, globals, lcmap) {
 		[['.while', ',test', ',body'], function (form) {
 			var test = te(this.test);
 			var body = ts(this.body);
-			var update = null;
-			if (body.type === 'BlockStatement' && body.body.length > 1 && body.body[body.body.length - 1] && body.body[body.body.length - 1].type === 'ExpressionStatement') {
-				update = body.body.pop().expression
-			}
 			return {
-				type: 'ForStatement',
-				init: null,
+				type: "WhileStatement",
 				test: test,
-				update: update,
 				body: body
 			}
 		}],
@@ -446,7 +440,7 @@ exports.pass = function (form, globals, lcmap) {
 		var idTemp = resolveTemp(t[1], t[2], resolutionCache, isStrict);
 		importStatements.push({
 			type: "VariableDeclaration",
-			kind: 'var',
+			kind: 'const',
 			declarations: [
 				{
 					type: 'VariableDeclarator',
@@ -462,7 +456,7 @@ exports.pass = function (form, globals, lcmap) {
 	})
 	globals.exports.forEachOwn(function(sink, t){
 		var idTemp = resolveTemp(t[1], t[2], resolutionCache, isStrict);
-			importStatements.push({
+		importStatements.push({
 			type: "VariableDeclaration",
 			kind: 'var',
 			declarations: [
