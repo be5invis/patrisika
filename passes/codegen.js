@@ -4,35 +4,36 @@
 var syntax_rule = require('../commons/match.js').syntax_rule;
 var _ = require('../commons/match.js')._;
 var atom = require('../commons/match.js').atom;
-var empty = require('../commons/match.js').empty;
 var any = require('../commons/match.js').any;
-var ref = require('../commons/match.js').ref;
 
 var resolveIdentifier = require('patrisika-scopes').resolveIdentifier
 var resolveTemp = require('patrisika-scopes').resolveTemp
 
 var FormInvalidError = require('../commons/formerror.js').FormInvalidError
 
-exports.pass = function (form, globals, lcmap) {
-	var lastNode;
+exports.pass = function (form, globals, lcmap, options) {
+	var lastNode, syntax_rule_withLoc;
 
-	if (!lcmap) var syntax_rule_withLoc = syntax_rule;
-	else var syntax_rule_withLoc = function () {
-		var fn = syntax_rule.apply(this, arguments);
-		return function (node) {
-			var t = lastNode;
-			if (node && node.begins >= 0 && node.ends >= 0) lastNode = node;
-			var res = fn.apply(this, arguments);
-			if (node && node.begins >= 0 && node.ends >= 0) {
-				res.loc = {
-					start: { line: lcmap.line[node.begins], column: lcmap.column[node.begins] },
-					end: { line: lcmap.line[node.ends], column: lcmap.column[node.ends] }
-				}
-			};
-			lastNode = t;
-			return res;
-		}
-	};
+	if (!lcmap) {
+		syntax_rule_withLoc = syntax_rule;
+	} else {
+		syntax_rule_withLoc = function () {
+			var fn = syntax_rule.apply(this, arguments);
+			return function (node) {
+				var t = lastNode;
+				if (node && node.begins >= 0 && node.ends >= 0) lastNode = node;
+				var res = fn.apply(this, arguments);
+				if (node && node.begins >= 0 && node.ends >= 0) {
+					res.loc = {
+						start: { line: lcmap.line[node.begins], column: lcmap.column[node.begins] },
+						end: { line: lcmap.line[node.ends], column: lcmap.column[node.ends] }
+					}
+				};
+				lastNode = t;
+				return res;
+			}
+		};
+	}
 
 	var holdingTasks = [];
 	var resolutionCache = [];
@@ -399,8 +400,7 @@ exports.pass = function (form, globals, lcmap) {
 		}]
 	);
 
-	var isStrict = false;
-	if (globals.options && globals.options.strict) isStrict = true;
+	var isStrict = globals.options && globals.options.strict;
 	var s = te(['.lambda.scoped', [], form, globals]);
 	while (holdingTasks.length) {
 		holdingTasks.shift()();
@@ -438,21 +438,34 @@ exports.pass = function (form, globals, lcmap) {
 	var exportStatements = []
 	globals.imports.forEachOwn(function(source, t){
 		var idTemp = resolveTemp(t[1], t[2], resolutionCache, isStrict);
-		importStatements.push({
-			type: "VariableDeclaration",
-			kind: 'const',
-			declarations: [
-				{
-					type: 'VariableDeclarator',
-					id: { type: "Identifier", name: idTemp },
-					init: {
-						type: "CallExpression",
-						callee: { type: "Identifier", name: "require" },
-						arguments: [{ type: "Literal", value: source }]
+		if(options && options.esm) {
+			importStatements.push({
+				type: "ImportDeclaration",
+				specifiers:[
+					{
+						type: 'ImportNamespaceSpecifier',
+						local: { type: "Identifier", name: idTemp }
 					}
-				}
-			]
-		});
+				],
+				source: { type: "Literal", value: source },
+			});
+		} else {
+			importStatements.push({
+				type: "VariableDeclaration",
+				kind: 'const',
+				declarations: [
+					{
+						type: 'VariableDeclarator',
+						id: { type: "Identifier", name: idTemp },
+						init: {
+							type: "CallExpression",
+							callee: { type: "Identifier", name: "require" },
+							arguments: [{ type: "Literal", value: source }]
+						}
+					}
+				]
+			});
+		}
 	})
 	globals.exports.forEachOwn(function(sink, t){
 		var idTemp = resolveTemp(t[1], t[2], resolutionCache, isStrict);
@@ -466,23 +479,45 @@ exports.pass = function (form, globals, lcmap) {
 				}
 			]
 		});
-		exportStatements.push({
-			type: "ExpressionStatement",
-			expression: {
-				type: 'AssignmentExpression',
-				operator: '=',
-				left: {
-					type: "MemberExpression",
-					object: { type: "Identifier", name: "exports" },
-					property: { type: "Literal", value: sink },
-					computed: true
-				},
-				right: { type: "Identifier", name: idTemp }
-			}
-		});
+		if(options && options.esm) {
+			importStatements.push({
+                type: "ExportNamedDeclaration",
+                specifiers: [
+                    {
+                        type: "ExportSpecifier",
+                        local: { type: "Identifier", name: idTemp },
+                        exported: { type: "Identifier", name: sink },
+                    },
+                ],
+            });
+		} else {
+			exportStatements.push({
+				type: "ExpressionStatement",
+				expression: {
+					type: 'AssignmentExpression',
+					operator: '=',
+					left: {
+						type: "MemberExpression",
+						object: { type: "Identifier", name: "exports" },
+						property: { type: "Literal", value: sink },
+						computed: true
+					},
+					right: { type: "Identifier", name: idTemp }
+				}
+			});
+		}
 	})
-	return {
-		type:'BlockStatement',
-		body: [...importStatements, ...s.body.body, ...exportStatements]
+
+	if (options && options.isProgram) {
+		return {
+			type: 'Program',
+			sourceType: options && options.esm ? 'script' : 'module',
+			body: [...importStatements, ...s.body.body, ...exportStatements]
+		}
+	} else {
+		return {
+			type: 'BlockStatement',
+			body: [...importStatements, ...s.body.body, ...exportStatements]
+		}
 	}
 };
