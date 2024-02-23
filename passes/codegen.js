@@ -85,11 +85,11 @@ exports.pass = function (form, globals, lcmap, options) {
 			return {
 				type: 'TryStatement',
 				block: tb(this.block),
-				handlers: [{
+				handler: {
 					type: 'CatchClause',
 					param: te(this.param),
 					body: tb(this.handler)
-				}]
+				}
 			}
 		}],
 		[['.return', ',argument'], function (form) {
@@ -301,9 +301,21 @@ exports.pass = function (form, globals, lcmap, options) {
 			}
 		}],
 		[['.quote', ',val'], function (form) {
-			if (this.val === undefined) return { type: 'UnaryExpression', operator: 'void', prefix: true, argument: { type: 'Literal', value: 0 } }
-			else if (typeof this.val === "number" && this.val < 0) return { type: "UnaryExpression", operator: '-', prefix: true, argument: { type: "Literal", value: -this.val } }
-			else return { type: 'Literal', value: this.val }
+			if (this.val === undefined) {
+				return { type: 'UnaryExpression', operator: 'void', prefix: true, argument: { type: 'Literal', value: 0 } }
+			} else if (typeof this.val === "number" && this.val < 0) {
+				return { type: "UnaryExpression", operator: '-', prefix: true, argument: { type: "Literal", value: -this.val } }
+			} else if (this.val instanceof RegExp) {
+				return {
+					type:"Literal",
+					regex: {
+						pattern: this.val.source,
+						flags: this.val.flags
+					}
+				} 
+			} else {
+				return { type: 'Literal', value: this.val }
+			}
 		}],
 		[['.unit'], function (form) {
 			return { type: 'UnaryExpression', operator: 'void', prefix: true, argument: { type: 'Literal', value: 0 } }
@@ -366,6 +378,7 @@ exports.pass = function (form, globals, lcmap, options) {
 				type: 'ObjectExpression',
 				properties: this.pairs.map(function (pair) {
 					return {
+						type: "Property",
 						key: { type: 'Literal', value: pair[0] },
 						value: te(pair[1]),
 						kind: 'init'
